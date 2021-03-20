@@ -1,0 +1,3 @@
+- [ ] Config in brainfuck
+- [ ] Ctrl-C term running process
+- [ ] Write new lang
