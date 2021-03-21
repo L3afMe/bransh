@@ -8,5 +8,6 @@ edition = "2018"
 
 [dependencies]
 crossterm = "0.19.0"
+ctrlc = "3.1.8"
 home = "0.5.3"
 whoami = "1.1.1"

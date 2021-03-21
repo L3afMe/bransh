@@ -1,4 +1,4 @@
-use std::{env, fmt, io::stdout};
+use std::{env, fmt};
 
 use crossterm::{
     cursor::{MoveLeft, MoveRight, MoveToNextLine, MoveToPreviousLine, RestorePosition, SavePosition},
@@ -18,41 +18,54 @@ pub fn move_cursor(ctx: &mut Context, move_size: i16) {
     } else {
         Ok(())
     } {
-        print_error(format!("Unable to move cursor! {}", why));
+        print_error(ctx, format!("Unable to move cursor! {}", why));
     }
 }
 
 pub fn print_cmd_buf(ctx: &mut Context, move_size: i16) {
-    let pos = (ctx.cursor_pos.0 as usize) - ctx.prompt.len();
+    let pos = (ctx.cursor_pos.0 as usize) - ctx.prompt_len();
     if let Err(why) = execute!(
         &ctx.writer,
         SavePosition,
         MoveLeft(pos as u16),
         Clear(ClearType::UntilNewLine),
-        PrintCmdBuf(ctx.command_buffer.clone(), ctx.options),
+        PrintCmdBuf(ctx.command_buffer.clone(), &ctx.options),
         RestorePosition,
     ) {
-        print_error(format!("Unable to print command buffer! {}", why));
+        print_error(ctx, format!("Unable to print command buffer! {}", why));
     }
 
     move_cursor(ctx, move_size);
 }
 
-pub fn print_line<T: ToString>(text: T) {
+pub fn print_line<T: ToString>(ctx: &mut Context, text: T) {
     if let Err(why) = execute!(
-        stdout(),
+        &ctx.writer,
         SavePosition,
         Print(format!("{}\n", text.to_string())),
         RestorePosition,
         MoveToNextLine(1),
     ) {
-        print_error(format!("Unable to print line! {}", why));
+        print_error(ctx, format!("Unable to print line! {}", why));
     }
 }
 
-pub fn print_error<T: ToString>(text: T) {
+pub fn print_prompt(ctx: &mut Context) {
     if let Err(why) = execute!(
-        stdout(),
+        &ctx.writer,
+        SavePosition,
+        Print("\n".to_string()),
+        RestorePosition,
+        MoveToNextLine(1),
+        Print(&ctx.prompt)
+    ) {
+        print_error(ctx, format!("Unable to print prompt! {}", why));
+    }
+}
+
+pub fn print_error<T: ToString>(ctx: &mut Context, text: T) {
+    if let Err(why) = execute!(
+        &ctx.writer,
         SavePosition,
         MoveToPreviousLine(1),
         SetForegroundColor(Color::Red),
@@ -67,15 +80,15 @@ pub fn print_error<T: ToString>(text: T) {
     }
 }
 
-pub fn clear_error() {
+pub fn clear_error(ctx: &mut Context) {
     if let Err(why) = execute!(
-        stdout(),
+        &ctx.writer,
         SavePosition,
         MoveToPreviousLine(1),
         Clear(ClearType::CurrentLine),
         RestorePosition,
     ) {
-        print_error(format!("Unable to clear error! {}", why));
+        print_error(ctx, format!("Unable to clear error! {}", why));
     }
 }
 
@@ -118,7 +131,7 @@ impl<'t> Command for PrintCmdBuf<'t> {
 pub fn format_prompt(ctx: &mut Context) {
     let mut prompt_format = ctx.options.prompt.format.clone();
 
-    if prompt_format.contains("{PWD}") {
+    if prompt_format.contains("{WD}") {
         let mut working_dir = env::current_dir()
             .unwrap_or_default()
             .to_str()
@@ -128,12 +141,29 @@ pub fn format_prompt(ctx: &mut Context) {
         if ctx.options.prompt.truncate_home {
             if let Ok(home) = env::var("HOME") {
                 if working_dir.starts_with(&home) {
-                    working_dir = format!("~{}", working_dir[home.len()..working_dir.len()].to_string());
+                    working_dir = format!(
+                        "{}{}",
+                        ctx.options.prompt.truncate_home_symbol,
+                        working_dir[home.len()..working_dir.len()].to_string()
+                    );
                 }
             }
         }
 
-        prompt_format = prompt_format.replace("{PWD}", &working_dir);
+        let dir_trunc = ctx.options.prompt.truncate_directories as usize;
+        if dir_trunc != 0 {
+            let split: Vec<&str> = working_dir.split('/').collect();
+            if split.len() > dir_trunc {
+                let (_, trunc_dirs) = split.split_at(split.len() - dir_trunc);
+                working_dir = format!(
+                    "{}/{}",
+                    ctx.options.prompt.truncate_directories_symbol,
+                    trunc_dirs.join("/")
+                );
+            }
+        }
+
+        prompt_format = prompt_format.replace("{WD}", &working_dir);
     }
 
     if prompt_format.contains("{HOST}") {

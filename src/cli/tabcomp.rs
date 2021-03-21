@@ -1,44 +1,25 @@
 use crossterm::event::KeyCode;
 
-use crate::{
-    cli::util::{print_cmd_buf, print_error},
-    command::get_valid_commands,
-    prelude::Context,
-};
+use crate::{cli::util::{print_cmd_buf, print_error}, command::get_valid_commands, prelude::{CommandBufferBackup, Context}};
 
-#[derive(Debug, Default)]
-struct TabBackup {
-    command_buffer: String,
-    cursor_pos:     u16,
-}
-
-impl TabBackup {
-    fn new(command_buffer: String, cursor_pos: u16) -> Self {
-        Self {
-            command_buffer,
-            cursor_pos,
-        }
-    }
-}
-
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct TabContext {
     pub index: i16,
     pub list:  Vec<String>,
-    backup:    TabBackup,
+    backup:    CommandBufferBackup,
 }
 
 pub fn handle_tab(ctx: &mut Context) {
     let old_buf = ctx.command_buffer.clone();
     let trimmed_command = old_buf.trim_start();
-    let (trimmed_command, _) = trimmed_command.split_at(ctx.cursor_pos.0 as usize - ctx.prompt.len());
+    let (trimmed_command, _) = trimmed_command.split_at(ctx.cursor_pos.0 as usize - ctx.prompt_len());
     if trimmed_command.contains(' ') {
         // TODO: Arg tab
         // completion
     } else {
         if ctx.last_key.code != KeyCode::Tab {
             ctx.tab.index = 0;
-            ctx.tab.backup = TabBackup::new(ctx.command_buffer.clone(), ctx.cursor_pos.0);
+            ctx.tab.backup = CommandBufferBackup::new(ctx.command_buffer.clone(), ctx.cursor_pos.0);
             ctx.tab.list = get_valid_commands(&ctx.options)
                 .into_iter()
                 .filter(|cmd| cmd.starts_with(trimmed_command))
@@ -66,7 +47,7 @@ pub fn handle_tab(ctx: &mut Context) {
                     print_cmd_buf(ctx, dif);
                 },
                 None => {
-                    print_error("Unable to get tab completion value");
+                    print_error(ctx, "Unable to get tab completion value");
                 },
             }
         };
@@ -74,7 +55,6 @@ pub fn handle_tab(ctx: &mut Context) {
 }
 
 pub fn clear_tab(ctx: &mut Context) {
-    ctx.command_buffer = ctx.tab.backup.command_buffer.clone();
-    let new_pos = (ctx.tab.backup.cursor_pos as i16) - (ctx.cursor_pos.0 as i16);
-    print_cmd_buf(ctx, new_pos);
+    let backup = ctx.tab.backup.clone();
+    ctx.restore_backup(&backup);
 }

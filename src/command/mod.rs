@@ -1,10 +1,7 @@
 use std::{
     os::unix::{prelude::MetadataExt, process::ExitStatusExt},
     process::Command,
-    time::Duration,
 };
-
-use crossterm::event::{poll, read, Event, KeyCode, KeyModifiers};
 
 use crate::{cli::util::print_line, options::Options, prelude::Context};
 
@@ -31,56 +28,29 @@ pub fn execute(ctx: &mut Context) -> Option<i32> {
             let external_cmd = Command::new(cmd).args(args).spawn();
             match external_cmd {
                 Ok(mut cmd) => loop {
-                    let poll_res = poll(Duration::from_millis(10));
-                    if let Ok(has_event) = poll_res {
-                        if has_event {
-                            let event = match read() {
-                                Ok(event) => event,
-                                Err(why) => {
-                                    print_line(format!("Unable to capture event! {}", why));
-                                    continue;
+                    match cmd.wait() {
+                        Ok(exit_status) => match exit_status.code() {
+                            Some(code) => {
+                                output = code;
+                                break;
+                            },
+                            None => match exit_status.signal() {
+                                Some(signal) => {
+                                    output = 128 + signal;
+                                    break;
                                 },
-                            };
-
-                            if let Event::Key(key) = event {
-                                if let KeyCode::Char(chr) = key.code {
-                                    if chr == 'c' && key.modifiers == KeyModifiers::CONTROL {
-                                        if let Err(why) = cmd.kill() {
-                                            print_line(format!("Unable to terminate command! {}", why));
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    match cmd.try_wait() {
-                        Ok(exit_status) => {
-                            if let Some(exit_status) = exit_status {
-                                match exit_status.code() {
-                                    Some(code) => {
-                                        output = code;
-                                        break;
-                                    },
-                                    None => match exit_status.signal() {
-                                        Some(signal) => {
-                                            output = 128 + signal;
-                                            break;
-                                        },
-                                        None => {
-                                            print_line("Status terminated with no exit status!");
-                                        },
-                                    },
-                                }
-                            }
+                                None => {
+                                    print_line(ctx, "Status terminated with no exit status!");
+                                },
+                            },
                         },
                         Err(why) => {
-                            print_line(format!("Unable to get commant status command! {}", why));
+                            print_line(ctx, format!("Unable to execute command! {}", why));
                         },
                     }
                 },
                 Err(why) => {
-                    print_line(format!("Unable to execute command! {}", why));
+                    print_line(ctx, format!("Unable to execute command! {}", why));
                 },
             }
         },
