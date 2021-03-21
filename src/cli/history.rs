@@ -76,7 +76,7 @@ pub fn handle_history(ctx: &mut Context) {
     if ctx.current_key.code == KeyCode::Down {
         let history_len = ctx.history.lines.len();
         if ctx.history.index as usize == history_len {
-            print_error(ctx, "At start of history!");
+            print_error(ctx, "Reached start of history!");
             return;
         }
 
@@ -107,14 +107,14 @@ pub fn handle_history(ctx: &mut Context) {
             ctx.history.backup = CommandBufferBackup::new(ctx.command_buffer.clone(), ctx.cursor_pos.0);
             let history_len = ctx.history.lines.len() as u16;
             if history_len == 0 {
-                print_error(ctx, "At end of history!");
+                print_error(ctx, "Reached end of history!");
                 return;
             }
 
             ctx.history.index = history_len - 1;
         } else {
             if ctx.history.index == 0 {
-                print_error(ctx, "At end of history!");
+                print_error(ctx, "Reached end of history!");
                 return;
             }
 
