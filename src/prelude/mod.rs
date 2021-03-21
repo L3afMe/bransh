@@ -2,7 +2,7 @@ use std::io::{Stdout, stdout};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use crate::options::Options;
-pub use crate::util::tabcomp::*;
+use crate::cli::tabcomp::TabContext;
 
 pub struct Context<'t> {
     pub command_buffer: String,
@@ -23,7 +23,7 @@ impl<'t> Context<'t> {
             cursor_pos: (0, 0),
             current_key: KeyEvent::new(KeyCode::Null, KeyModifiers::NONE),
             last_key: KeyEvent::new(KeyCode::Null, KeyModifiers::NONE),
-            tab: TabContext::new(),
+            tab: TabContext::default(),
             options,
             writer: stdout()
         }

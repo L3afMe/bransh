@@ -1,9 +1,28 @@
 use std::{env, path::PathBuf};
 
 #[derive(Debug, Clone)]
+pub struct PromptOptions {
+    pub format: String,
+    pub truncate_home: bool,
+    pub truncate_directories: u8,
+}
+
+impl Default for PromptOptions {
+    fn default() -> Self {
+        Self {
+            format: String::from("{USER}@{HOST}:{PWD}$ "),
+            truncate_home: true,
+            truncate_directories: 0,
+        }
+    }
+
+}
+
+#[derive(Debug, Clone)]
 pub struct Options {
     pub syntax_highlighting: bool,
-    pub paths: Vec<PathBuf>
+    pub paths: Vec<PathBuf>,
+    pub prompt: PromptOptions
 }
 
 impl Default for Options {
@@ -15,6 +34,7 @@ impl Default for Options {
         Self {
             syntax_highlighting: true,
             paths,
+            prompt: PromptOptions::default()
         }
     }
 }
