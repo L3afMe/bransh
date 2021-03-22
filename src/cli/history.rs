@@ -1,4 +1,5 @@
 use std::{
+    env,
     fs::{create_dir_all, File, OpenOptions},
     io::{Error, Read, Write},
     path::Path,
@@ -7,10 +8,7 @@ use std::{
 use crossterm::event::KeyCode;
 
 use super::util::{print_cmd_buf, print_error};
-use crate::{
-    options::get_config_dir,
-    prelude::{CommandBufferBackup, Context},
-};
+use crate::prelude::{CommandBufferBackup, Context};
 
 #[derive(Debug, Default, Clone)]
 pub struct HistoryContext {
@@ -125,5 +123,21 @@ pub fn handle_history(ctx: &mut Context) {
         let buf_dif = (new_buf.len() as i16) - (ctx.command_buffer.len() as i16);
         ctx.command_buffer = new_buf;
         print_cmd_buf(ctx, buf_dif);
+    }
+}
+
+pub fn get_config_dir() -> Option<String> {
+    if cfg!(unix) {
+        let config_var = env::var("XDG_CONFIG_DIR");
+        if let Ok(config) = config_var {
+            return Some(format!("{}/bransh/", config));
+        }
+
+        let home_path = home::home_dir()?;
+        let home = home_path.to_str()?;
+        Some(format!("{}/.config/bransh", home))
+    } else {
+        // TODO: add Windows support
+        None
     }
 }

@@ -1,4 +1,6 @@
 - [ ] Config in brainfuck
+- [ ] branshrc.br
+- [ ] cli flags
 - [x] Ctrl-C term running process
 - [ ] Write new lang
 - [x] Handle multi-word args

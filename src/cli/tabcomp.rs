@@ -1,6 +1,10 @@
 use crossterm::event::KeyCode;
 
-use crate::{cli::util::{print_cmd_buf, print_error}, command::get_valid_commands, prelude::{CommandBufferBackup, Context}};
+use crate::{
+    cli::util::{print_cmd_buf, print_error},
+    command::get_valid_commands,
+    prelude::{CommandBufferBackup, Context},
+};
 
 #[derive(Debug, Default, Clone)]
 pub struct TabContext {
@@ -20,7 +24,7 @@ pub fn handle_tab(ctx: &mut Context) {
         if ctx.last_key.code != KeyCode::Tab {
             ctx.tab.index = 0;
             ctx.tab.backup = CommandBufferBackup::new(ctx.command_buffer.clone(), ctx.cursor_pos.0);
-            ctx.tab.list = get_valid_commands(&ctx.options)
+            ctx.tab.list = get_valid_commands()
                 .into_iter()
                 .filter(|cmd| cmd.starts_with(trimmed_command))
                 .collect();
@@ -33,7 +37,7 @@ pub fn handle_tab(ctx: &mut Context) {
 
             // Set to negative 1 as the last key is still tab
             // and next tab will increment it by 1 which will
-            // set it to 0, could alternatively set last key 
+            // set it to 0, could alternatively set last key
             // to escape but this will require the tab list to
             // be refreshed again and will cause more delay
             ctx.tab.index = -1;

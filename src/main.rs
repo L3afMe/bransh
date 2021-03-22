@@ -1,12 +1,10 @@
-pub mod command;
-pub mod options;
-pub mod prelude;
-pub mod cli;
+mod cli;
+mod command;
+mod prelude;
+mod script;
 
 fn main() {
-    let opts = options::load_options();
-
-    if let Err(why) = cli::run_term(opts) {
+    if let Err(why) = cli::run_term() {
         eprintln!("Error occured while running terminal! {}", why);
-    } 
+    }
 }

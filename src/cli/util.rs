@@ -10,7 +10,6 @@ use crossterm::{
 
 use crate::{
     command::{is_valid_command, tokenize::TokenizationError},
-    options::Options,
     prelude::Context,
 };
 
@@ -33,7 +32,7 @@ pub fn print_cmd_buf(ctx: &mut Context, move_size: i16) {
         SavePosition,
         MoveLeft(pos as u16),
         Clear(ClearType::UntilNewLine),
-        PrintCmdBuf(ctx.command_buffer.clone(), &ctx.options),
+        PrintCmdBuf(ctx.command_buffer.clone(), &ctx),
         RestorePosition,
     ) {
         print_error(ctx, format!("Unable to print command buffer! {}", why));
@@ -97,14 +96,14 @@ pub fn clear_error(ctx: &mut Context) {
     }
 }
 
-struct PrintCmdBuf<'t>(pub String, pub &'t Options);
+struct PrintCmdBuf<'t>(pub String, pub &'t Context);
 
 impl<'t> Command for PrintCmdBuf<'t> {
     fn write_ansi(&self, writer: &mut impl fmt::Write) -> fmt::Result {
         let command_buffer = &self.0;
-        let opts = self.1;
+        let ctx = self.1;
 
-        if !opts.syntax_highlighting || command_buffer.is_empty() {
+        if !ctx.get_variable("SYN_HIGHLIGHTING", true) || command_buffer.is_empty() {
             return write!(writer, "{}", command_buffer);
         }
 
@@ -137,7 +136,7 @@ impl<'t> Command for PrintCmdBuf<'t> {
                     }
                     continue;
                 } else {
-                    let command_str = if is_valid_command(opts, &cmd_buf) {
+                    let command_str = if is_valid_command(&cmd_buf) {
                         cmd_buf.clone().dark_green()
                     } else {
                         cmd_buf.clone().dark_red()
@@ -190,7 +189,7 @@ impl<'t> Command for PrintCmdBuf<'t> {
         }
 
         if !done_cmd {
-            let command_str = if is_valid_command(opts, &cmd_buf) {
+            let command_str = if is_valid_command(&cmd_buf) {
                 cmd_buf.dark_green()
             } else {
                 cmd_buf.dark_red()
@@ -202,29 +201,6 @@ impl<'t> Command for PrintCmdBuf<'t> {
         }
 
         Ok(())
-
-        // let mut command_and_args =
-        // trimmed_command.split_whitespace();
-        // let command = command_and_args.next().unwrap();
-        // let args = format!(" {}",
-        // command_and_args.collect::<Vec<&str>>().join("
-        // ")).reset();
-
-        // let cmd = if is_valid_command(&opts, &command) {
-        //     command.dark_green()
-        // } else {
-        //     command.dark_red()
-        // };
-
-        // let pos = command_buffer.find(command).
-        // unwrap_or(0);
-
-        // // TODO: Handle errors
-        // Print(" ".repeat(pos)).write_ansi(writer).
-        // unwrap_or_else(|_| {});
-        // PrintStyledContent(cmd).write_ansi(writer).
-        // unwrap_or_else(|_| {});
-        // PrintStyledContent(args).write_ansi(writer)
     }
 
     #[cfg(windows)]
@@ -234,7 +210,7 @@ impl<'t> Command for PrintCmdBuf<'t> {
 }
 
 pub fn format_prompt(ctx: &mut Context) {
-    let mut prompt_format = ctx.options.prompt.format.clone();
+    let mut prompt_format = ctx.get_variable("PROMPT", String::from("{WD} | "));
 
     if prompt_format.contains("{WD}") {
         let mut working_dir = env::current_dir()
@@ -243,28 +219,27 @@ pub fn format_prompt(ctx: &mut Context) {
             .unwrap_or("[Error]")
             .to_string();
 
-        if ctx.options.prompt.truncate_home {
+        let home_trunc = ctx.get_variable("P_HOME_TRUNC", true);
+        if home_trunc {
             if let Ok(home) = env::var("HOME") {
                 if working_dir.starts_with(&home) {
+                    let home_trunc_char = ctx.get_variable("P_HOME_CHAR", String::from("~"));
                     working_dir = format!(
                         "{}{}",
-                        ctx.options.prompt.truncate_home_symbol,
+                        home_trunc_char,
                         working_dir[home.len()..working_dir.len()].to_string()
                     );
                 }
             }
         }
 
-        let dir_trunc = ctx.options.prompt.truncate_directories as usize;
+        let dir_trunc = ctx.get_variable("P_DIR_TRUNC", 2);
         if dir_trunc != 0 {
             let split: Vec<&str> = working_dir.split('/').collect();
             if split.len() > dir_trunc {
+                let dir_trunc_char = ctx.get_variable("P_DIR_CHAR", String::from("…"));
                 let (_, trunc_dirs) = split.split_at(split.len() - dir_trunc);
-                working_dir = format!(
-                    "{}/{}",
-                    ctx.options.prompt.truncate_directories_symbol,
-                    trunc_dirs.join("/")
-                );
+                working_dir = format!("{}/{}", dir_trunc_char, trunc_dirs.join("/"));
             }
         }
 

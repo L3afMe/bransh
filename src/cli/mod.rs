@@ -7,8 +7,8 @@ use crossterm::{
 
 use crate::{
     command::{execute, tokenize::tokenize_command},
-    options::Options,
     prelude::Context,
+    script::load_rc,
 };
 
 pub mod history;
@@ -19,7 +19,7 @@ pub mod util;
 use key::handle_key;
 use util::{clear_error, format_prompt, print_error, print_line, print_prompt, print_tokenization_error};
 
-pub fn run_term(opts: Options) -> Result<()> {
+pub fn run_term() -> Result<()> {
     // Set dummy handler so that ctrl-c doesn't terminate
     // cli when running commands as raw mode is disabled.
     // Print line so that the last output line doesn't get
@@ -29,6 +29,10 @@ pub fn run_term(opts: Options) -> Result<()> {
     })
     .expect("Unable to setup ctrl-c handler");
 
+    let mut ctx = Context::default();
+
+    load_rc(&mut ctx);
+
     if let Err(why) = history::init_history() {
         println!("Unable to initialise history file! {}", why);
     }
@@ -36,8 +40,6 @@ pub fn run_term(opts: Options) -> Result<()> {
     if let Err(why) = enable_raw_mode() {
         panic!("Unable to enable raw mode! {}", why);
     }
-
-    let mut ctx = Context::new(opts);
 
     loop {
         ctx.command_buffer = String::new();

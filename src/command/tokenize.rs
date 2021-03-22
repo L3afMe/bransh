@@ -180,14 +180,17 @@ fn args_to_command(mut args: Vec<String>) -> Option<Command> {
     let output_type;
     let background;
 
-    if let Some(last) = args.clone().last() {
-        if OutputType::is_valid(last) {
-            args.pop();
-        }
+    let mut should_pop = false;
+    if let Some(last) = args.last() {
+        should_pop = OutputType::is_valid(last);
 
         output_type = OutputType::from(last);
     } else {
         output_type = OutputType::default()
+    }
+
+    if should_pop {
+        args.pop();
     }
 
     if let Some(last) = args.last() {

@@ -1,12 +1,15 @@
 use std::{
+    env,
     os::unix::{prelude::MetadataExt, process::ExitStatusExt},
     process::{Child, Command, Stdio},
 };
 
 use self::tokenize::{tokenize_command, OutputType, TokenizationError};
-use crate::{cli::util::print_line, options::Options, prelude::Context};
+use crate::{cli::util::print_line, prelude::Context};
 
 mod cd;
+mod get;
+mod set;
 pub mod tokenize;
 
 pub fn execute(ctx: &mut Context) -> Option<i32> {
@@ -60,7 +63,9 @@ pub fn execute(ctx: &mut Context) -> Option<i32> {
 
         match cmd.command.as_ref() {
             "exit" => return None,
-            "cd" => output = cd::execute(cmd.args),
+            "cd" => output = cd::execute(cmd.args, ctx),
+            "set" => output = set::execute(cmd.args, ctx),
+            "get" => output = get::execute(cmd.args, ctx),
             _ => {
                 let mut external_cmd_builder = Command::new(cmd.command);
                 external_cmd_builder.args(cmd.args);
@@ -131,11 +136,19 @@ pub fn execute(ctx: &mut Context) -> Option<i32> {
     Some(last_output)
 }
 
-pub fn is_valid_command(opts: &Options, command: &str) -> bool {
-    if command == "exit" || command == "cd" {
+pub fn is_valid_command(command: &str) -> bool {
+    if command == "exit" || command == "cd" || command == "get" || command == "set" {
         return true;
     }
-    for path in &opts.paths {
+
+    let paths = match env::var("PATH") {
+        Ok(paths) => paths,
+        Err(_) => return false,
+    };
+    
+    let paths = env::split_paths(&paths);
+
+    for path in paths {
         let files = if let Ok(files) = path.read_dir() {
             files
         } else {
@@ -159,10 +172,22 @@ pub fn is_valid_command(opts: &Options, command: &str) -> bool {
     false
 }
 
-pub fn get_valid_commands(opts: &Options) -> Vec<String> {
-    let mut cmds = vec![String::from("exit"), String::from("cd")];
+pub fn get_valid_commands() -> Vec<String> {
+    let mut cmds = vec![
+        String::from("exit"),
+        String::from("cd"),
+        String::from("set"),
+        String::from("get"),
+    ];
 
-    for path in &opts.paths {
+    let paths = match env::var("PATH") {
+        Ok(paths) => paths,
+        Err(_) => return cmds,
+    };
+    
+    let paths = env::split_paths(&paths);
+
+    for path in paths {
         let files = if let Ok(files) = path.read_dir() {
             files
         } else {

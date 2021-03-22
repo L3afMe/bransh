@@ -1,6 +1,8 @@
 use std::{env, path::Path};
 
-pub fn execute(args: Vec<String>) -> i32 {
+use crate::prelude::Context;
+
+pub fn execute(args: Vec<String>, _ctx: &mut Context) -> i32 {
     let mut dirs = get_prev_dirs().unwrap_or_default();
     let mut dir_idx = get_dir_idx().unwrap_or(dirs.len() as usize);
 
@@ -9,31 +11,31 @@ pub fn execute(args: Vec<String>) -> i32 {
         "-" => {
             if dir_idx == 0 {
                 println!("Already at end of dir history!");
-                return 3;
+                return 0;
             }
 
             dir_idx -= 1;
-            match dirs.get(dir_idx){
+            match dirs.get(dir_idx) {
                 Some(dir) => new_dir = dir.clone(),
                 None => {
                     println!("Unable to get previous dir!");
-                    return 3;
-                }
+                    return 0;
+                },
             }
         },
         "+" => {
             if dir_idx == dirs.len() {
                 println!("Already at start of dir history!");
-                return 3;
+                return 0;
             }
 
             dir_idx += 1;
-            match dirs.get(dir_idx){
+            match dirs.get(dir_idx) {
                 Some(dir) => new_dir = dir.clone(),
                 None => {
                     println!("Unable to get next dir!");
-                    return 3;
-                }
+                    return 0;
+                },
             }
         },
         _ => {},
@@ -84,7 +86,7 @@ pub fn execute(args: Vec<String>) -> i32 {
     set_prev_dirs(dirs);
     set_dir_idx(dir_idx);
 
-    2
+    0
 }
 
 fn get_dir_idx() -> Option<usize> {
