@@ -2,7 +2,7 @@
 - [x] Ctrl-C term running process
 - [ ] Write new lang
 - [x] Handle multi-word args
-- [ ] Piping stdout/err
+- [x] Piping stdout/err
 - [ ] '&&' and '||'
 - [x] ';' splitting
 - [x] Background processes
