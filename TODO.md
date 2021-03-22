@@ -1,10 +1,11 @@
 - [ ] Config in brainfuck
 - [x] Ctrl-C term running process
 - [ ] Write new lang
-- [ ] Handle multi-word args
+- [x] Handle multi-word args
 - [ ] Piping stdout/err
-- [ ] '&&' and ';' are called
-- [ ] Background processes
+- [ ] '&&' and '||'
+- [x] ';' splitting
+- [x] Background processes
 - [x] Command tab completion
 - [ ] Sudo/doas on double escape
 - [ ] File tab completion

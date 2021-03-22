@@ -5,22 +5,29 @@ use crossterm::{
     Result,
 };
 
-use crate::{command::execute, options::Options, prelude::Context};
+use crate::{
+    command::{execute, tokenize::tokenize_command},
+    options::Options,
+    prelude::Context,
+};
 
+pub mod history;
 pub mod key;
 pub mod tabcomp;
 pub mod util;
-pub mod history;
 
 use key::handle_key;
-use util::{clear_error, format_prompt, print_error, print_line, print_prompt};
+use util::{clear_error, format_prompt, print_error, print_line, print_prompt, print_tokenization_error};
 
 pub fn run_term(opts: Options) -> Result<()> {
     // Set dummy handler so that ctrl-c doesn't terminate
     // cli when running commands as raw mode is disabled.
     // Print line so that the last output line doesn't get
     // cleared on clear_error()
-    ctrlc::set_handler(move || { println!(" "); }).expect("Unable to setup ctrl-c handler");
+    ctrlc::set_handler(move || {
+        println!(" ");
+    })
+    .expect("Unable to setup ctrl-c handler");
 
     if let Err(why) = history::init_history() {
         println!("Unable to initialise history file! {}", why);
@@ -54,12 +61,20 @@ pub fn run_term(opts: Options) -> Result<()> {
             };
 
             if let Event::Key(key) = event {
-                clear_error(&mut ctx);
                 ctx.last_key = ctx.current_key;
                 ctx.current_key = key;
                 if !handle_key(&mut ctx) {
                     break;
                 }
+
+                if !ctx.command_buffer.is_empty() {
+                    if let Err(why) = tokenize_command(ctx.command_buffer.clone()) {
+                        print_tokenization_error(&mut ctx, why);
+                        continue;
+                    }
+                }
+
+                clear_error(&mut ctx);
             }
         }
 

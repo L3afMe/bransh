@@ -1,10 +1,10 @@
-use std::{env, path::Path, str::SplitWhitespace};
+use std::{env, path::Path};
 
-pub fn execute(args: SplitWhitespace) -> i32 {
+pub fn execute(args: Vec<String>) -> i32 {
     let mut dirs = get_prev_dirs().unwrap_or_default();
     let mut dir_idx = get_dir_idx().unwrap_or(dirs.len() as usize);
 
-    let mut new_dir = args.peekable().peek().map_or("~", |dir| *dir).to_string();
+    let mut new_dir = args.into_iter().peekable().peek().map_or("~", |dir| dir).to_string();
     match new_dir.as_ref() {
         "-" => {
             if dir_idx == 0 {
