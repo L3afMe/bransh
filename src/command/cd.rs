@@ -6,8 +6,9 @@ pub fn execute(args: Vec<String>, _ctx: &mut Context) -> i32 {
     let mut dirs = get_prev_dirs().unwrap_or_default();
     let mut dir_idx = get_dir_idx().unwrap_or(dirs.len() as usize);
 
-    let mut new_dir = args.into_iter().peekable().peek().map_or("~", |dir| dir).to_string();
-    match new_dir.as_ref() {
+    let original_dir = args.into_iter().peekable().peek().map_or("~", |dir| dir).to_string();
+    let mut new_dir;
+    match original_dir.as_ref() {
         "-" => {
             if dir_idx == 0 {
                 println!("Already at end of dir history!");
@@ -38,7 +39,9 @@ pub fn execute(args: Vec<String>, _ctx: &mut Context) -> i32 {
                 },
             }
         },
-        _ => {},
+        _ => {
+            new_dir = original_dir.clone();
+        },
     }
 
     if new_dir.starts_with('~') {
@@ -67,12 +70,12 @@ pub fn execute(args: Vec<String>, _ctx: &mut Context) -> i32 {
         return 3;
     }
 
-    if new_dir != "-" && new_dir != "+" {
+    if original_dir != "-" && original_dir != "+" {
         if dir_idx != dirs.len() {
             let _ = dirs.split_off(dir_idx);
-        } else {
-            dir_idx += 1;
         }
+
+        dir_idx += 1;
     }
 
     match old_dir {
@@ -90,27 +93,19 @@ pub fn execute(args: Vec<String>, _ctx: &mut Context) -> i32 {
 }
 
 fn get_dir_idx() -> Option<usize> {
-    if let Ok(dir_idx_str) = env::var("BRSH_CUR_DIR_IDX") {
-        if let Ok(dir_idx) = dir_idx_str.parse::<usize>() {
-            return Some(dir_idx);
-        }
-    }
-
-    None
+    let dir_idx = env::var("BRANSH_CUR_DIR_IDX").ok()?;
+    dir_idx.parse::<usize>().ok()
 }
 
 fn get_prev_dirs() -> Option<Vec<String>> {
-    if let Ok(dir) = env::var("BRSH_PREV_dirs") {
-        return Some(dir.split(':').map(|dir| dir.to_string()).collect());
-    }
-
-    None
+    let dir = env::var("BRANSH_PREV_DIRS").ok()?;
+    Some(dir.split(':').map(|dir| dir.to_string()).collect())
 }
 
 fn set_prev_dirs(dirs: Vec<String>) {
-    env::set_var("BRSH_PREV_dirs", dirs.join(":"));
+    env::set_var("BRANSH_PREV_DIRS", dirs.join(":"));
 }
 
 fn set_dir_idx(dir_idx: usize) {
-    env::set_var("BRSH_CUR_DIR_IDX", dir_idx.to_string());
+    env::set_var("BRANSH_CUR_DIR_IDX", dir_idx.to_string());
 }
