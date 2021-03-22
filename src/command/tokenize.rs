@@ -157,10 +157,7 @@ pub fn tokenize_command(command_buffer: String) -> Result<TokenizedCommands, Tok
     }
 
     if last_buf_char == '\\' && !last_escaped {
-        return Err(TokenizationError::InvalidEscape(
-            buffer.len() + left_trim_size,
-            char::default(),
-        ));
+        return Err(TokenizationError::InvalidEscape(buffer.len() + left_trim_size, char::default()));
     }
 
     Ok(commands)

@@ -20,10 +20,7 @@ pub struct HistoryContext {
 fn get_history_file(opts: &mut OpenOptions) -> Result<File, Error> {
     let conf_dir = get_config_dir();
     if conf_dir.is_none() {
-        return Err(Error::new(
-            std::io::ErrorKind::NotFound,
-            "Unable to find config directory",
-        ));
+        return Err(Error::new(std::io::ErrorKind::NotFound, "Unable to find config directory"));
     }
 
     let conf = conf_dir.unwrap();

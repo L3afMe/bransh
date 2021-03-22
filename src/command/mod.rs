@@ -145,7 +145,7 @@ pub fn is_valid_command(command: &str) -> bool {
         Ok(paths) => paths,
         Err(_) => return false,
     };
-    
+
     let paths = env::split_paths(&paths);
 
     for path in paths {
@@ -184,7 +184,7 @@ pub fn get_valid_commands() -> Vec<String> {
         Ok(paths) => paths,
         Err(_) => return cmds,
     };
-    
+
     let paths = env::split_paths(&paths);
 
     for path in paths {

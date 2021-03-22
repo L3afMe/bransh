@@ -142,9 +142,7 @@ impl<'t> Command for PrintCmdBuf<'t> {
                         cmd_buf.clone().dark_red()
                     };
 
-                    PrintStyledContent(command_str)
-                        .write_ansi(writer)
-                        .unwrap_or_else(|_| {});
+                    PrintStyledContent(command_str).write_ansi(writer).unwrap_or_else(|_| {});
                     done_cmd = true;
                 }
             }
@@ -195,9 +193,7 @@ impl<'t> Command for PrintCmdBuf<'t> {
                 cmd_buf.dark_red()
             };
 
-            PrintStyledContent(command_str)
-                .write_ansi(writer)
-                .unwrap_or_else(|_| {});
+            PrintStyledContent(command_str).write_ansi(writer).unwrap_or_else(|_| {});
         }
 
         Ok(())
@@ -213,22 +209,15 @@ pub fn format_prompt(ctx: &mut Context) {
     let mut prompt_format = ctx.get_variable("PROMPT", String::from("{WD} | "));
 
     if prompt_format.contains("{WD}") {
-        let mut working_dir = env::current_dir()
-            .unwrap_or_default()
-            .to_str()
-            .unwrap_or("[Error]")
-            .to_string();
+        let mut working_dir = env::current_dir().unwrap_or_default().to_str().unwrap_or("[Error]").to_string();
 
         let home_trunc = ctx.get_variable("P_HOME_TRUNC", true);
         if home_trunc {
             if let Ok(home) = env::var("HOME") {
                 if working_dir.starts_with(&home) {
                     let home_trunc_char = ctx.get_variable("P_HOME_CHAR", String::from("~"));
-                    working_dir = format!(
-                        "{}{}",
-                        home_trunc_char,
-                        working_dir[home.len()..working_dir.len()].to_string()
-                    );
+                    working_dir =
+                        format!("{}{}", home_trunc_char, working_dir[home.len()..working_dir.len()].to_string());
                 }
             }
         }

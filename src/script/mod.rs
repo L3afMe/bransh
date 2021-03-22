@@ -1,9 +1,16 @@
-use std::{fs::OpenOptions, io::{Read, Write}, path::{Path, PathBuf}};
+use std::{
+    fs::OpenOptions,
+    io::{Read, Write},
+    path::{Path, PathBuf},
+};
 
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 
-use crate::{cli::history::get_config_dir, command::execute, prelude::Context};
-use crate::cli::util::print_line;
+use crate::{
+    cli::{history::get_config_dir, util::print_line},
+    command::execute,
+    prelude::Context,
+};
 
 pub fn load_rc(ctx: &mut Context) {
     let config_dir = match get_config_dir() {
@@ -11,20 +18,20 @@ pub fn load_rc(ctx: &mut Context) {
         None => {
             eprintln!("Unable to get config directory!");
             return;
-        }
+        },
     };
 
     if !config_dir.exists() {
         write_default_config(config_dir);
         return;
     }
-    
+
     let mut config_file = match OpenOptions::new().read(true).open(config_dir) {
         Ok(config) => config,
         Err(why) => {
             eprintln!("Unable to read branshrc.br! {}", why);
             return;
-        }
+        },
     };
 
     let mut config = String::new();
@@ -33,7 +40,7 @@ pub fn load_rc(ctx: &mut Context) {
         Err(why) => {
             eprintln!("Unable to read branshrc.br! {}", why);
             return;
-        }
+        },
     };
 
     if let Err(why) = enable_raw_mode() {
@@ -65,11 +72,10 @@ fn write_default_config(file: PathBuf) {
         Err(why) => {
             eprintln!("Unable to create default branshrc.br! {}", why);
             return;
-        }
+        },
     };
 
-    let default_config = 
-    r#"
+    let default_config = r#"
 set PROMPT "{WD} | "
 
 set P_HOME_TRUNC true
@@ -79,7 +85,8 @@ set P_DIR_TRUNC 2
 set P_DIR_CHAR  "…"
 
 set SYN_HIGHLIGHTING true
-"#.trim();
+"#
+    .trim();
 
     match config.write_all(default_config.as_bytes()) {
         Ok(()) => {},
