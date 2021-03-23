@@ -12,6 +12,7 @@ impl Default for OutputType {
     }
 }
 
+#[allow(dead_code)]
 impl OutputType {
     fn is_valid(chr: &str) -> bool {
         chr == "&&" || chr == "||" || chr == "|" || chr == ";"
@@ -48,10 +49,23 @@ impl Command {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenizationError {
     UnterminateQuote(usize, char),
     InvalidEscape(usize, char),
     UnexpectedValue(usize, String, String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ArgType {
+    Quoted(String),
+    Raw(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TokenizeType {
+    Arg(Vec<ArgType>),
+    End(OutputType),
 }
 
 pub type TokenizedCommands = Vec<Command>;
@@ -72,8 +86,9 @@ pub fn tokenize_command(command_buffer: String) -> Result<TokenizedCommands, Tok
     let mut in_quote = char::default();
     let mut quote_pos = 0;
 
-    let mut args: Vec<String> = Vec::new();
-    let mut arg = String::new();
+    let mut args: Vec<TokenizeType> = Vec::new();
+    let mut arg: Vec<ArgType> = Vec::new();
+    let mut arg_part = String::new();
 
     let mut last_buf_char = char::default();
     let mut last_escaped = false;
@@ -81,10 +96,15 @@ pub fn tokenize_command(command_buffer: String) -> Result<TokenizedCommands, Tok
     for (idx, buf_char) in buffer.chars().enumerate() {
         if last_buf_char == '\\' && !last_escaped {
             match buf_char {
-                '#' | ';' | '|' | '&' | '>' | '\\' | '"' | '\'' => arg.push(buf_char),
-                'n' => arg.push('\n'),
-                'r' => arg.push('\r'),
-                't' => arg.push('\t'),
+                '#' | ';' | '|' | '&' | '>' | '\\' | '"' | '\'' => {
+                    if !arg_part.is_empty() && in_quote == char::default() {
+                        arg.push(ArgType::Raw(arg_part));
+                        arg_part = buf_char.into();
+                    }
+                },
+                'n' => arg_part.push('\n'),
+                'r' => arg_part.push('\r'),
+                't' => arg_part.push('\t'),
                 _ => return Err(TokenizationError::InvalidEscape(idx + 1 + left_trim_size, buf_char)),
             }
 
@@ -93,31 +113,48 @@ pub fn tokenize_command(command_buffer: String) -> Result<TokenizedCommands, Tok
             continue;
         } else if buf_char == '\'' || buf_char == '"' {
             if in_quote == char::default() {
+                if !arg_part.is_empty() {
+                    arg.push(ArgType::Raw(arg_part));
+                    arg_part = String::new();
+                }
+
                 in_quote = buf_char;
                 quote_pos = idx + 1 + left_trim_size;
             } else if in_quote == buf_char {
+                if !arg_part.is_empty() {
+                    arg.push(ArgType::Quoted(arg_part));
+                    arg_part = String::new();
+                }
+
                 in_quote = char::default();
             } else {
-                arg.push(buf_char)
+                arg_part.push(buf_char)
             }
         } else if buf_char == ' ' && in_quote == char::default() {
-            if !arg.is_empty() {
-                args.push(arg);
-                arg = String::new();
-            }
-        } else if (buf_char == ';' || buf_char == '|') && in_quote == char::default() {
-            if !arg.is_empty() {
-                args.push(arg);
-                arg = String::new();
+            if !arg_part.is_empty() {
+                arg.push(ArgType::Raw(arg_part));
+                arg_part = String::new();
             }
 
-            args.push(buf_char.into());
+            if !arg.is_empty() {
+                args.push(TokenizeType::Arg(arg));
+                arg = Vec::new();
+            }
+        } else if (buf_char == ';' || buf_char == '|') && in_quote == char::default() {
+            if !arg_part.is_empty() {
+                arg.push(ArgType::Raw(arg_part));
+                args.push(TokenizeType::Arg(arg));
+                arg = Vec::new();
+                arg_part = String::new();
+            }
+
+            args.push(TokenizeType::End(OutputType::from(&buf_char.to_string())));
 
             match args_to_command(args) {
                 Some(command) => commands.push(command),
                 None => {
                     return Err(TokenizationError::UnexpectedValue(
-                        buffer.len() + left_trim_size,
+                        idx + left_trim_size,
                         String::from("command"),
                         String::from("null"),
                     ));
@@ -126,15 +163,19 @@ pub fn tokenize_command(command_buffer: String) -> Result<TokenizedCommands, Tok
 
             args = Vec::new();
         } else if buf_char != '\\' {
-            arg.push(buf_char)
+            arg_part.push(buf_char)
         }
 
         last_escaped = false;
         last_buf_char = buf_char;
     }
 
+    if !arg_part.is_empty() {
+        arg.push(ArgType::Raw(arg_part));
+    }
+
     if !arg.is_empty() {
-        args.push(arg);
+        args.push(TokenizeType::Arg(arg));
     }
 
     match args_to_command(args) {
@@ -163,36 +204,67 @@ pub fn tokenize_command(command_buffer: String) -> Result<TokenizedCommands, Tok
     Ok(commands)
 }
 
-fn args_to_command(mut args: Vec<String>) -> Option<Command> {
+fn args_to_command(mut args: Vec<TokenizeType>) -> Option<Command> {
     if args.is_empty() {
         return None;
     }
 
-    let cmd_name = args[0].clone();
-    args.remove(0);
-    let output_type;
-    let background;
-
-    let mut should_pop = false;
-    if let Some(last) = args.last() {
-        should_pop = OutputType::is_valid(last);
-
-        output_type = OutputType::from(last);
-    } else {
-        output_type = OutputType::default()
+    let mut cmd_name = String::new();
+    if let Some(TokenizeType::Arg(tokens)) = args.first() {
+        for val in tokens {
+            match val {
+                ArgType::Raw(val) => cmd_name += val,
+                ArgType::Quoted(val) => cmd_name += val,
+            }
+        }
     }
 
-    if should_pop {
+    if cmd_name.is_empty() {
+        return None;
+    }
+
+    // Remove cmd name from args
+    args.remove(0);
+    let mut output_type = OutputType::Ignore;
+    let mut background = false;
+
+    if let Some(TokenizeType::End(out)) = args.last() {
+        output_type = out.clone();
         args.pop();
     }
 
-    if let Some(last) = args.last() {
-        background = last == "&";
-    } else {
-        background = false;
+    if let Some(TokenizeType::Arg(val)) = args.last() {
+        if val.len() == 1 {
+            if let ArgType::Raw(raw_val) = &val[0] {
+                if raw_val == "&" {
+                    background = true;
+                    args.pop();
+                }
+            }
+        }
     }
 
-    let command = Command::new(cmd_name, args, background, output_type);
+    let mut output_args = Vec::new();
+    for arg in args {
+        match arg {
+            TokenizeType::Arg(val) => {
+                let mut temp_arg = String::new();
+                for arg_part in val {
+                    match arg_part {
+                        ArgType::Raw(val) => temp_arg += &val,
+                        ArgType::Quoted(val) => temp_arg += &val,
+                    }
+                }
+
+                if !temp_arg.is_empty() {
+                    output_args.push(temp_arg);
+                }
+            },
+            _ => break,
+        }
+    }
+
+    let command = Command::new(cmd_name, output_args, background, output_type);
 
     Some(command)
 }
