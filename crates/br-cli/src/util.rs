@@ -1,16 +1,13 @@
 use std::{env, fmt};
 
+use br_data::context::Context;
+use br_parser::{TokenizationError, is_valid_command};
 use crossterm::{
     cursor::{MoveLeft, MoveRight, MoveToNextLine, MoveToPreviousLine, RestorePosition, SavePosition},
     execute,
     style::{Color, Colorize, Print, PrintStyledContent, ResetColor, SetForegroundColor, Styler},
     terminal::{Clear, ClearType},
     Command,
-};
-
-use crate::{
-    command::{is_valid_command, tokenize::TokenizationError},
-    prelude::Context,
 };
 
 pub fn move_cursor(ctx: &mut Context, move_size: i16) {
@@ -26,13 +23,13 @@ pub fn move_cursor(ctx: &mut Context, move_size: i16) {
 }
 
 pub fn print_cmd_buf(ctx: &mut Context, move_size: i16) {
-    let pos = (ctx.cursor_pos.0 as usize) - ctx.prompt_len();
+    let pos = (ctx.cli.cursor_pos.0 as usize) - ctx.cli.prompt_len();
     if let Err(why) = execute!(
         &ctx.writer,
         SavePosition,
         MoveLeft(pos as u16),
         Clear(ClearType::UntilNewLine),
-        PrintCmdBuf(ctx.command_buffer.clone(), ctx),
+        PrintCmdBuf(ctx.cli.command_buffer.clone(), ctx),
         RestorePosition,
     ) {
         print_error(ctx, format!("Unable to print command buffer! {}", why));
@@ -60,7 +57,7 @@ pub fn print_prompt(ctx: &mut Context) {
         Print("\n".to_string()),
         RestorePosition,
         MoveToNextLine(1),
-        Print(&ctx.prompt)
+        Print(&ctx.cli.prompt)
     ) {
         print_error(ctx, format!("Unable to print prompt! {}", why));
     }
@@ -103,7 +100,7 @@ impl<'t> Command for PrintCmdBuf<'t> {
         let command_buffer = &self.0;
         let ctx = self.1;
 
-        if !ctx.get_variable("SYN_HIGHLIGHTING", true) || command_buffer.is_empty() {
+        if !ctx.get_variable("SYN_HIGHLIGHTING", true, false) || command_buffer.is_empty() {
             return write!(writer, "{}", command_buffer);
         }
 
@@ -143,7 +140,9 @@ impl<'t> Command for PrintCmdBuf<'t> {
                     cmd_buf.clone().dark_red()
                 };
 
-                PrintStyledContent(command_str).write_ansi(writer).unwrap_or_else(|_| {});
+                PrintStyledContent(command_str)
+                    .write_ansi(writer)
+                    .unwrap_or_else(|_| {});
                 done_cmd = true;
             }
 
@@ -193,7 +192,9 @@ impl<'t> Command for PrintCmdBuf<'t> {
                 cmd_buf.dark_red()
             };
 
-            PrintStyledContent(command_str).write_ansi(writer).unwrap_or_else(|_| {});
+            PrintStyledContent(command_str)
+                .write_ansi(writer)
+                .unwrap_or_else(|_| {});
         }
 
         Ok(())
@@ -206,27 +207,34 @@ impl<'t> Command for PrintCmdBuf<'t> {
 }
 
 pub fn format_prompt(ctx: &mut Context) {
-    let mut prompt_format = ctx.get_variable("PROMPT", String::from("{WD} | "));
+    let mut prompt_format = ctx.get_variable("PROMPT", String::from("{WD} | "), false);
 
     if prompt_format.contains("{WD}") {
-        let mut working_dir = env::current_dir().unwrap_or_default().to_str().unwrap_or("[Error]").to_string();
+        let mut working_dir = env::current_dir()
+            .unwrap_or_default()
+            .to_str()
+            .unwrap_or("[Error]")
+            .to_string();
 
-        let home_trunc = ctx.get_variable("P_HOME_TRUNC", true);
+        let home_trunc = ctx.get_variable("P_HOME_TRUNC", true, false);
         if home_trunc {
             if let Ok(home) = env::var("HOME") {
                 if working_dir.starts_with(&home) {
-                    let home_trunc_char = ctx.get_variable("P_HOME_CHAR", String::from("~"));
-                    working_dir =
-                        format!("{}{}", home_trunc_char, working_dir[home.len()..working_dir.len()].to_string());
+                    let home_trunc_char = ctx.get_variable("P_HOME_CHAR", String::from("~"), false);
+                    working_dir = format!(
+                        "{}{}",
+                        home_trunc_char,
+                        working_dir[home.len()..working_dir.len()].to_string()
+                    );
                 }
             }
         }
 
-        let dir_trunc = ctx.get_variable("P_DIR_TRUNC", 2);
+        let dir_trunc = ctx.get_variable("P_DIR_TRUNC", 2, false);
         if dir_trunc != 0 {
             let split: Vec<&str> = working_dir.split('/').collect();
             if split.len() > dir_trunc {
-                let dir_trunc_char = ctx.get_variable("P_DIR_CHAR", String::from("…"));
+                let dir_trunc_char = ctx.get_variable("P_DIR_CHAR", String::from("…"), false);
                 let (_, trunc_dirs) = split.split_at(split.len() - dir_trunc);
                 working_dir = format!("{}/{}", dir_trunc_char, trunc_dirs.join("/"));
             }
@@ -250,7 +258,7 @@ pub fn format_prompt(ctx: &mut Context) {
         prompt_format = prompt_format.replace("{USER}", &user);
     }
 
-    ctx.prompt = prompt_format;
+    ctx.cli.prompt = prompt_format;
 }
 
 pub fn print_tokenization_error(ctx: &mut Context, error: TokenizationError) {
@@ -263,4 +271,10 @@ pub fn print_tokenization_error(ctx: &mut Context, error: TokenizationError) {
     };
 
     print_error(ctx, error_str);
+}
+
+pub fn restore_backup(ctx: &mut Context) {
+    ctx.cli.command_buffer = ctx.cli.completion.backup.buffer.clone();
+    let new_pos = (ctx.cli.completion.backup.cursor as i16) - (ctx.cli.cursor_pos.0 as i16);
+    print_cmd_buf(ctx, new_pos);
 }

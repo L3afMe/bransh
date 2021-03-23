@@ -1,8 +1,14 @@
 use std::{env, path::Path};
 
-use crate::prelude::Context;
+use br_data::{command::{BrBuiltin, ExecuteFn}, context::Context};
 
-pub fn execute(args: Vec<String>, _ctx: &mut Context) -> i32 {
+pub const CMD: BrBuiltin = BrBuiltin {
+    name: "cd",
+    execute
+};
+
+#[allow(non_upper_case_globals)]
+const execute: ExecuteFn = |args: Vec<String>, _ctx: &mut Context| -> i32 {
     let mut dirs = get_prev_dirs().unwrap_or_default();
     let mut dir_idx = get_dir_idx().unwrap_or(dirs.len() as usize);
 
@@ -90,7 +96,7 @@ pub fn execute(args: Vec<String>, _ctx: &mut Context) -> i32 {
     set_dir_idx(dir_idx);
 
     0
-}
+};
 
 fn get_dir_idx() -> Option<usize> {
     let dir_idx = env::var("BRANSH_CUR_DIR_IDX").ok()?;

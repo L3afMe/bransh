@@ -1,0 +1,11 @@
+[package]
+name = "br-script"
+version = "0.1.0"
+authors = ["L3af <L3afMeAlon3@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+br-data = { path = "../br-data" }
+br-executer = { path = "../br-executer" }

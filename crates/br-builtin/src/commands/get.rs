@@ -1,8 +1,15 @@
-use std::env;
+use br_data::{
+    command::{BrBuiltin, ExecuteFn},
+    context::Context,
+};
 
-use crate::prelude::Context;
+pub const CMD: BrBuiltin = BrBuiltin {
+    name: "get",
+    execute,
+};
 
-pub fn execute(args: Vec<String>, ctx: &mut Context) -> i32 {
+#[allow(non_upper_case_globals)]
+const execute: ExecuteFn = |args: Vec<String>, ctx: &mut Context| -> i32 {
     if args.len() > 1 {
         println!("Invalid arguments! Expected less than 2, got {}", args.len());
 
@@ -37,12 +44,8 @@ pub fn execute(args: Vec<String>, ctx: &mut Context) -> i32 {
         return 1;
     }
 
-    let val = if is_env {
-        env::var(var_name).unwrap_or_default()
-    } else {
-        ctx.variables.get(&var_name).unwrap_or(&String::new()).clone()
-    };
+    let val = ctx.get_variable(&var_name, String::new(), is_env);
     println!("{}", val);
 
     0
-}
+};

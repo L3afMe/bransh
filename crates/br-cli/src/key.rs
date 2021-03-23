@@ -1,16 +1,14 @@
+use br_data::context::Context;
 use crossterm::event::{KeyCode, KeyModifiers};
 
-use super::history::handle_history;
 use crate::{
-    cli::{
-        tabcomp::{clear_tab, handle_tab},
-        util::{move_cursor, print_cmd_buf},
-    },
-    prelude::Context,
+    history::handle_history,
+    tabcomp::{clear_tab, handle_tab},
+    util::{move_cursor, print_cmd_buf},
 };
 
 pub fn handle_key(ctx: &mut Context) -> bool {
-    match ctx.current_key.code {
+    match ctx.cli.current_key.code {
         KeyCode::Enter => return false,
 
         // History
@@ -37,52 +35,52 @@ pub fn handle_key(ctx: &mut Context) -> bool {
 }
 
 fn handle_esc(ctx: &mut Context) {
-    if ctx.last_key.code == KeyCode::Tab {
+    if ctx.cli.last_key.code == KeyCode::Tab {
         clear_tab(ctx);
-    } else if ctx.last_key.code == KeyCode::Up || ctx.last_key.code == KeyCode::Down {
+    } else if ctx.cli.last_key.code == KeyCode::Up || ctx.cli.last_key.code == KeyCode::Down {
         handle_history(ctx);
     }
 }
 
 fn handle_char(ctx: &mut Context) {
-    let pressed_key = if let KeyCode::Char(pressed_key) = ctx.current_key.code {
+    let pressed_key = if let KeyCode::Char(pressed_key) = ctx.cli.current_key.code {
         pressed_key
     } else {
         return;
     };
 
-    let pos = (ctx.cursor_pos.0 as usize) - ctx.prompt_len();
+    let pos = (ctx.cli.cursor_pos.0 as usize) - ctx.cli.prompt_len();
 
-    if pressed_key == 'c' && ctx.current_key.modifiers == KeyModifiers::CONTROL {
-        ctx.command_buffer = String::new();
+    if pressed_key == 'c' && ctx.cli.current_key.modifiers == KeyModifiers::CONTROL {
+        ctx.cli.command_buffer = String::new();
         print_cmd_buf(ctx, -(pos as i16));
 
         return;
     }
 
-    ctx.command_buffer.insert(pos, pressed_key);
+    ctx.cli.command_buffer.insert(pos, pressed_key);
     print_cmd_buf(ctx, 1);
 }
 
 fn move_sol(ctx: &mut Context) {
-    let pos = (ctx.cursor_pos.0 as usize) - ctx.prompt_len();
+    let pos = (ctx.cli.cursor_pos.0 as usize) - ctx.cli.prompt_len();
 
     move_cursor(ctx, -(pos as i16));
 }
 
 fn move_eol(ctx: &mut Context) {
-    let pos = ctx.prompt_len() + ctx.command_buffer.len() - (ctx.cursor_pos.0 as usize);
+    let pos = ctx.cli.prompt_len() + ctx.cli.command_buffer.len() - (ctx.cli.cursor_pos.0 as usize);
 
     move_cursor(ctx, pos as i16);
 }
 
 fn move_left(ctx: &mut Context) {
-    if (ctx.cursor_pos.0 as usize) > ctx.prompt_len() {
-        let move_size = if ctx.current_key.modifiers == KeyModifiers::CONTROL {
-            let pos = (ctx.cursor_pos.0 as usize) - ctx.prompt_len();
-            let t = ctx.command_buffer.clone();
+    if (ctx.cli.cursor_pos.0 as usize) > ctx.cli.prompt_len() {
+        let move_size = if ctx.cli.current_key.modifiers == KeyModifiers::CONTROL {
+            let pos = (ctx.cli.cursor_pos.0 as usize) - ctx.cli.prompt_len();
+            let t = ctx.cli.command_buffer.clone();
 
-            let (split, _) = t.split_at(pos.min(ctx.command_buffer.len()));
+            let (split, _) = t.split_at(pos.min(ctx.cli.command_buffer.len()));
             let split_trim = split.trim_end();
             let trim_len = split.len() - split_trim.len();
 
@@ -99,10 +97,10 @@ fn move_left(ctx: &mut Context) {
 }
 
 fn move_right(ctx: &mut Context) {
-    if (ctx.cursor_pos.0 as usize) < ctx.prompt_len() + ctx.command_buffer.len() {
-        let move_size = if ctx.current_key.modifiers == KeyModifiers::CONTROL {
-            let pos = (ctx.cursor_pos.0 as usize) - ctx.prompt_len();
-            let (_, split) = ctx.command_buffer.split_at(pos.min(ctx.command_buffer.len()));
+    if (ctx.cli.cursor_pos.0 as usize) < ctx.cli.prompt_len() + ctx.cli.command_buffer.len() {
+        let move_size = if ctx.cli.current_key.modifiers == KeyModifiers::CONTROL {
+            let pos = (ctx.cli.cursor_pos.0 as usize) - ctx.cli.prompt_len();
+            let (_, split) = ctx.cli.command_buffer.split_at(pos.min(ctx.cli.command_buffer.len()));
 
             split.find(' ').unwrap_or_else(|| split.len() - 1) + 1
         } else {
@@ -114,19 +112,19 @@ fn move_right(ctx: &mut Context) {
 }
 
 fn handle_backspace(ctx: &mut Context) {
-    let x = ctx.cursor_pos.0 as usize;
-    if x > ctx.prompt_len() {
-        let pos = x - ctx.prompt_len() - 1;
-        ctx.command_buffer.remove(pos);
+    let x = ctx.cli.cursor_pos.0 as usize;
+    if x > ctx.cli.prompt_len() {
+        let pos = x - ctx.cli.prompt_len() - 1;
+        ctx.cli.command_buffer.remove(pos);
         print_cmd_buf(ctx, -1);
     }
 }
 
 fn handle_delete(ctx: &mut Context) {
-    let x = ctx.cursor_pos.0 as usize;
-    if x > ctx.prompt_len() {
-        let pos = x - ctx.prompt_len();
-        ctx.command_buffer.remove(pos);
+    let x = ctx.cli.cursor_pos.0 as usize;
+    if x > ctx.cli.prompt_len() {
+        let pos = x - ctx.cli.prompt_len();
+        ctx.cli.command_buffer.remove(pos);
         print_cmd_buf(ctx, 0);
     }
 }

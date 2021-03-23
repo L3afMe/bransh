@@ -4,13 +4,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
-
-use crate::{
-    cli::{history::get_config_dir, util::print_line},
-    command::execute,
-    prelude::Context,
-};
+use br_executer::execute;
+use br_data::{context::Context, get_config_dir};
 
 pub fn load_rc(ctx: &mut Context) {
     let config_dir = match get_config_dir() {
@@ -43,26 +38,19 @@ pub fn load_rc(ctx: &mut Context) {
         },
     };
 
-    if let Err(why) = enable_raw_mode() {
-        println!("Unable to enable raw mode! {}", why);
-    }
-
     for (line_num, line) in config.lines().enumerate() {
-        ctx.command_buffer = line.to_string();
+        ctx.cli.command_buffer = line.to_string();
         if let Some(exit_code) = execute(ctx) {
             if exit_code != 0 {
-                print_line(ctx, "Non 0 exit code returned while running file!");
-                print_line(ctx, format!("Line {}: '{}'", line_num, line));
+                eprintln!("Non 0 exit code returned while running file!");
+                eprintln!("Line {}: '{}'", line_num, line);
+
                 return;
             }
         } else {
             // 'exit' executed
             return;
         }
-    }
-
-    if let Err(why) = disable_raw_mode() {
-        print_line(ctx, format!("Unable to disable raw mode! {}", why));
     }
 }
 

@@ -15,6 +15,8 @@ pub struct Options {
     pub command: Option<String>
 }
 
-pub fn parse() -> Options {
-    Options::parse_args_default_or_exit()
+impl Options {
+    pub fn parse() -> Self {
+        Self::parse_args_default_or_exit()
+    }
 }

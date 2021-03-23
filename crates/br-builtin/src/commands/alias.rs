@@ -1,6 +1,15 @@
-use crate::prelude::Context;
+use br_data::{
+    command::{BrBuiltin, ExecuteFn},
+    context::Context,
+};
 
-pub fn execute(mut args: Vec<String>, ctx: &mut Context) -> i32 {
+pub const CMD: BrBuiltin = BrBuiltin {
+    name: "alias",
+    execute,
+};
+
+#[allow(non_upper_case_globals)]
+const execute: ExecuteFn = |mut args: Vec<String>, ctx: &mut Context| -> i32 {
     if args.is_empty() {
         eprintln!("Invalid arguments! Expected 1-2, got 0");
 
@@ -21,7 +30,7 @@ pub fn execute(mut args: Vec<String>, ctx: &mut Context) -> i32 {
             1
         }
     }
-}
+};
 
 fn get_alias(args: Vec<String>, ctx: &mut Context) -> i32 {
     if args.is_empty() {

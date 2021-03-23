@@ -1,4 +1,6 @@
-use crate::prelude::Context;
+use std::{env, os::unix::prelude::MetadataExt};
+
+use br_data::context::Context;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum OutputType {
@@ -121,7 +123,12 @@ pub fn tokenize_command(command_buffer: String, ctx: &Context) -> Result<Tokeniz
                 'n' => arg_part.push('\n'),
                 'r' => arg_part.push('\r'),
                 't' => arg_part.push('\t'),
-                _ => return Err(TokenizationError::InvalidEscape(((idx + 1) as i16 + left_trim_size) as usize, buf_char)),
+                _ => {
+                    return Err(TokenizationError::InvalidEscape(
+                        ((idx + 1) as i16 + left_trim_size) as usize,
+                        buf_char,
+                    ))
+                },
             }
 
             last_escaped = true;
@@ -214,7 +221,10 @@ pub fn tokenize_command(command_buffer: String, ctx: &Context) -> Result<Tokeniz
     }
 
     if last_buf_char == '\\' && !last_escaped {
-        return Err(TokenizationError::InvalidEscape((buffer.len() as i16 + left_trim_size) as usize, char::default()));
+        return Err(TokenizationError::InvalidEscape(
+            (buffer.len() as i16 + left_trim_size) as usize,
+            char::default(),
+        ));
     }
 
     Ok(commands)
@@ -283,4 +293,81 @@ fn args_to_command(mut args: Vec<TokenizeType>) -> Option<Command> {
     let command = Command::new(cmd_name, output_args, background, output_type);
 
     Some(command)
+}
+
+pub fn is_valid_command(command: &str, ctx: &Context) -> bool {
+    if ctx.builtins.clone().into_iter().any(|b| b.name == command) || ctx.aliases.contains_key(command) {
+        return true;
+    }
+
+    let paths = match env::var("PATH") {
+        Ok(paths) => paths,
+        Err(_) => return false,
+    };
+
+    let paths = env::split_paths(&paths);
+
+    for path in paths {
+        let files = if let Ok(files) = path.read_dir() {
+            files
+        } else {
+            continue;
+        };
+
+        for file in files.flatten() {
+            if file.file_name() != command {
+                continue;
+            }
+            if let Ok(metadata) = file.metadata() {
+                let mode = metadata.mode();
+                let can_exec = mode & 0o001 == 0o001;
+                if can_exec && file.file_name() == command {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
+}
+
+pub fn get_valid_commands(ctx: &Context) -> Vec<String> {
+    let mut cmds = Vec::new();
+
+    let mut builtins: Vec<String> = ctx.builtins.clone().into_iter().map(|b| b.name.to_string()).collect();
+    cmds.append(&mut builtins);
+
+    let mut aliases: Vec<String> = ctx.aliases.keys().map(|alias| alias.to_string()).collect();
+    cmds.append(&mut aliases);
+
+    let paths = match env::var("PATH") {
+        Ok(paths) => paths,
+        Err(_) => return cmds,
+    };
+
+    let paths = env::split_paths(&paths);
+
+    for path in paths {
+        let files = if let Ok(files) = path.read_dir() {
+            files
+        } else {
+            continue;
+        };
+
+        for file in files.flatten() {
+            if let Ok(metadata) = file.metadata() {
+                let mode = metadata.mode();
+                let can_exec = mode & 0o001 == 0o001;
+                if can_exec {
+                    if let Some(file_name) = file.file_name().to_str() {
+                        cmds.push(file_name.to_string())
+                    }
+                }
+            }
+        }
+    }
+
+    cmds.sort();
+
+    cmds
 }

@@ -1,3 +1,8 @@
+use br_data::{context::Context, options::Options};
+use br_parser::tokenize_command;
+use br_script::load_rc;
+use br_executer::execute;
+use br_builtin::load_builtins;
 use crossterm::{
     cursor::position,
     event::{read, Event},
@@ -6,20 +11,14 @@ use crossterm::{
 };
 
 use crate::{
-    cli::{
-        key::handle_key,
-        util::{clear_error, format_prompt, print_error, print_line, print_prompt, print_tokenization_error},
-    },
-    command::{execute, tokenize::tokenize_command},
-    options::Options,
-    prelude::Context,
-    script::load_rc,
+    key::handle_key,
+    util::{clear_error, format_prompt, print_error, print_line, print_prompt, print_tokenization_error},
 };
 
-pub mod history;
-pub mod key;
-pub mod tabcomp;
-pub mod util;
+mod history;
+mod key;
+mod tabcomp;
+mod util;
 
 pub fn run_term(opts: Options) -> Result<()> {
     // Set dummy handler so that ctrl-c doesn't terminate
@@ -37,6 +36,8 @@ pub fn run_term(opts: Options) -> Result<()> {
         load_rc(&mut ctx);
     }
 
+    load_builtins(&mut ctx);
+
     if let Err(why) = history::init_history() {
         println!("Unable to initialise history file! {}", why);
     }
@@ -46,7 +47,7 @@ pub fn run_term(opts: Options) -> Result<()> {
     }
 
     loop {
-        ctx.command_buffer = String::new();
+        ctx.cli.command_buffer = String::new();
         format_prompt(&mut ctx);
         print_prompt(&mut ctx);
 
@@ -59,7 +60,7 @@ pub fn run_term(opts: Options) -> Result<()> {
             let event = event_wrapped.unwrap();
 
             match position() {
-                Ok(pos) => ctx.cursor_pos = pos,
+                Ok(pos) => ctx.cli.cursor_pos = pos,
                 Err(why) => {
                     print_error(&mut ctx, format!("Unable to get cursor position! {}", why));
                     continue;
@@ -67,13 +68,13 @@ pub fn run_term(opts: Options) -> Result<()> {
             };
 
             if let Event::Key(key) = event {
-                ctx.last_key = ctx.current_key;
-                ctx.current_key = key;
+                ctx.cli.last_key = ctx.cli.current_key;
+                ctx.cli.current_key = key;
                 if !handle_key(&mut ctx) {
                     break;
                 }
 
-                let buffer = ctx.command_buffer.clone();
+                let buffer = ctx.cli.command_buffer.clone();
                 if !buffer.is_empty() {
                     if let Err(why) = tokenize_command(buffer, &mut ctx) {
                         print_tokenization_error(&mut ctx, why);
@@ -92,7 +93,7 @@ pub fn run_term(opts: Options) -> Result<()> {
             print_line(&mut ctx, format!("Unable to disable raw mode! {}", why));
         }
 
-        if let Err(why) = history::add_history(ctx.command_buffer.clone()) {
+        if let Err(why) = history::add_history(ctx.cli.command_buffer.clone()) {
             print_line(&mut ctx, format!("Unable to save command to history! {}", why))
         };
 

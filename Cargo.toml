@@ -6,11 +6,12 @@ version = "0.1.0"
 edition = "2018"
 repository = "https://github.com/L3afMe/bransh"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace]
+members = ["crates/*/"]
 
 [dependencies]
-crossterm = "0.19.0"
-ctrlc = "3.1.8"
-gumdrop = "0.8.0"
-home = "0.5.3"
-whoami = "1.1.1"
+br-cli      = { path = "./crates/br-cli" }
+br-data     = { path = "./crates/br-data" }
+br-executer = { path = "./crates/br-executer" }
+br-parser   = { path = "./crates/br-parser" }
+br-script   = { path = "./crates/br-script" }
