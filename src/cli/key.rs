@@ -23,7 +23,7 @@ pub fn handle_key(ctx: &mut Context) -> bool {
 
         // Tab completion
         KeyCode::Tab => handle_tab(ctx),
-        KeyCode::Esc => clear_tab(ctx),
+        KeyCode::Esc => handle_esc(ctx),
 
         // Movement
         KeyCode::Home => move_sol(ctx),
@@ -34,6 +34,14 @@ pub fn handle_key(ctx: &mut Context) -> bool {
     }
 
     true
+}
+
+fn handle_esc(ctx: &mut Context) {
+    if ctx.last_key.code == KeyCode::Tab {
+        clear_tab(ctx);
+    } else if ctx.last_key.code == KeyCode::Up || ctx.last_key.code == KeyCode::Down {
+        handle_history(ctx);
+    }
 }
 
 fn handle_char(ctx: &mut Context) {

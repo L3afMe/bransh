@@ -68,7 +68,10 @@ pub fn add_history(line: String) -> Result<(), Error> {
 }
 
 pub fn handle_history(ctx: &mut Context) {
-    if ctx.current_key.code == KeyCode::Down {
+    if ctx.current_key.code == KeyCode::Esc {
+        let backup = ctx.history.backup.clone();
+        ctx.restore_backup(&backup);
+    } else if ctx.current_key.code == KeyCode::Down {
         let history_len = ctx.history.lines.len();
         if ctx.history.index as usize == history_len {
             print_error(ctx, "Reached start of history!");
@@ -87,9 +90,7 @@ pub fn handle_history(ctx: &mut Context) {
         let buf_dif = (new_buf.len() as i16) - (ctx.command_buffer.len() as i16);
         ctx.command_buffer = new_buf;
         print_cmd_buf(ctx, buf_dif);
-    }
-
-    if ctx.current_key.code == KeyCode::Up {
+    } else if ctx.current_key.code == KeyCode::Up {
         if ctx.last_key.code != KeyCode::Down && ctx.last_key.code != KeyCode::Up {
             match find_history(ctx.command_buffer.clone()) {
                 Ok(history) => ctx.history.lines = history,
