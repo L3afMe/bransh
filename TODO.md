@@ -1,6 +1,6 @@
 - [ ] Config in brainfuck
 - [x] branshrc.br
-- [ ] cli flags
+- [x] cli flags
 - [x] Ctrl-C term running process
 - [ ] Write new lang
 - [x] Handle multi-word args
@@ -12,3 +12,4 @@
 - [ ] Sudo/doas on double escape
 - [ ] File tab completion
 - [ ] Command arg tab completion
+- [ ] Fix cd traversing

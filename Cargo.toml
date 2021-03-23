@@ -1,8 +1,10 @@
 [package]
 name = "bransh"
-version = "0.1.0"
+description = "A simple shell written in Rust"
 authors = ["L3af <L3afMeAlon3@gmail.com>"]
+version = "0.1.0"
 edition = "2018"
+repository = "https://github.com/L3afMe/bransh"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

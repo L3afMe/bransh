@@ -1,3 +1,5 @@
+use crate::prelude::Context;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum OutputType {
     Depend,
@@ -22,10 +24,10 @@ impl OutputType {
 impl From<&String> for OutputType {
     fn from(chr: &String) -> Self {
         match chr.as_ref() {
-            "&&" => OutputType::Depend,
-            "||" => OutputType::DependNot,
-            "|" => OutputType::Pipe,
-            _ => OutputType::Ignore,
+            "&&" => Self::Depend,
+            "||" => Self::DependNot,
+            "|" => Self::Pipe,
+            _ => Self::Ignore,
         }
     }
 }
@@ -71,8 +73,8 @@ pub enum TokenizeType {
 pub type TokenizedCommands = Vec<Command>;
 
 // TODO: Actual and efficient tokenizing when I'm not dumb
-pub fn tokenize_command(command_buffer: String) -> Result<TokenizedCommands, TokenizationError> {
-    let mut buffer = command_buffer.trim_start();
+pub fn tokenize_command(command_buffer: String, ctx: &Context) -> Result<TokenizedCommands, TokenizationError> {
+    let mut buffer = command_buffer.trim_start().to_string();
     let mut commands: TokenizedCommands = TokenizedCommands::new();
 
     if command_buffer.is_empty() {
@@ -80,8 +82,22 @@ pub fn tokenize_command(command_buffer: String) -> Result<TokenizedCommands, Tok
     }
 
     // Store trim size so syntax positions are correct
-    let left_trim_size = command_buffer.len() - buffer.len();
-    buffer = buffer.trim_end();
+    let mut left_trim_size = (command_buffer.len() - buffer.len()) as i16;
+    buffer = buffer.trim_end().to_string();
+
+    for alias in ctx.aliases.keys() {
+        if buffer.starts_with(&(alias.to_owned() + " ")) {
+            let (_, new_buf) = buffer.split_at(alias.len());
+
+            let start_buf_len = buffer.len();
+            let alias_val = ctx.aliases.get(alias).unwrap();
+            buffer = format!("{} {}", alias_val, new_buf);
+
+            left_trim_size -= (buffer.len() - start_buf_len) as i16;
+
+            break;
+        }
+    }
 
     let mut in_quote = char::default();
     let mut quote_pos = 0;
@@ -105,7 +121,7 @@ pub fn tokenize_command(command_buffer: String) -> Result<TokenizedCommands, Tok
                 'n' => arg_part.push('\n'),
                 'r' => arg_part.push('\r'),
                 't' => arg_part.push('\t'),
-                _ => return Err(TokenizationError::InvalidEscape(idx + 1 + left_trim_size, buf_char)),
+                _ => return Err(TokenizationError::InvalidEscape(((idx + 1) as i16 + left_trim_size) as usize, buf_char)),
             }
 
             last_escaped = true;
@@ -119,7 +135,7 @@ pub fn tokenize_command(command_buffer: String) -> Result<TokenizedCommands, Tok
                 }
 
                 in_quote = buf_char;
-                quote_pos = idx + 1 + left_trim_size;
+                quote_pos = ((idx + 1) as i16 + left_trim_size) as usize;
             } else if in_quote == buf_char {
                 if !arg_part.is_empty() {
                     arg.push(ArgType::Quoted(arg_part));
@@ -154,7 +170,7 @@ pub fn tokenize_command(command_buffer: String) -> Result<TokenizedCommands, Tok
                 Some(command) => commands.push(command),
                 None => {
                     return Err(TokenizationError::UnexpectedValue(
-                        idx + left_trim_size,
+                        (idx as i16 + left_trim_size) as usize,
                         String::from("command"),
                         String::from("null"),
                     ));
@@ -184,7 +200,7 @@ pub fn tokenize_command(command_buffer: String) -> Result<TokenizedCommands, Tok
             if let Some(cmd) = commands.last() {
                 if cmd.output_type != OutputType::Ignore {
                     return Err(TokenizationError::UnexpectedValue(
-                        buffer.len() + left_trim_size,
+                        (buffer.len() as i16 + left_trim_size) as usize,
                         String::from("command"),
                         String::from("null"),
                     ));
@@ -198,7 +214,7 @@ pub fn tokenize_command(command_buffer: String) -> Result<TokenizedCommands, Tok
     }
 
     if last_buf_char == '\\' && !last_escaped {
-        return Err(TokenizationError::InvalidEscape(buffer.len() + left_trim_size, char::default()));
+        return Err(TokenizationError::InvalidEscape((buffer.len() as i16 + left_trim_size) as usize, char::default()));
     }
 
     Ok(commands)

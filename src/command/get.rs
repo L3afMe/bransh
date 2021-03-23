@@ -10,7 +10,7 @@ pub fn execute(args: Vec<String>, ctx: &mut Context) -> i32 {
     }
 
     if args.is_empty() {
-        let keys: Vec<&String> = ctx.variables.keys().into_iter().collect();
+        let keys = ctx.variables.keys();
         println!("{:?}", keys);
 
         return 0;

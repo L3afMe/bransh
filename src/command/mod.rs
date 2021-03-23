@@ -7,6 +7,7 @@ use std::{
 use self::tokenize::{tokenize_command, OutputType, TokenizationError};
 use crate::{cli::util::print_line, prelude::Context};
 
+mod alias;
 mod cd;
 mod get;
 mod set;
@@ -21,7 +22,7 @@ pub fn execute_once(command: String) {
 }
 
 pub fn execute(ctx: &mut Context) -> Option<i32> {
-    let tokenize_res = tokenize_command(ctx.command_buffer.clone());
+    let tokenize_res = tokenize_command(ctx.command_buffer.clone(), ctx);
     let tokenized = match tokenize_res {
         Ok(val) => val,
         Err(why) => {
@@ -71,6 +72,7 @@ pub fn execute(ctx: &mut Context) -> Option<i32> {
 
         match cmd.command.as_ref() {
             "exit" => return None,
+            "alias" => output = alias::execute(cmd.args, ctx),
             "cd" => output = cd::execute(cmd.args, ctx),
             "set" => output = set::execute(cmd.args, ctx),
             "get" => output = get::execute(cmd.args, ctx),
@@ -144,8 +146,12 @@ pub fn execute(ctx: &mut Context) -> Option<i32> {
     Some(last_output)
 }
 
-pub fn is_valid_command(command: &str) -> bool {
-    if command == "exit" || command == "cd" || command == "get" || command == "set" {
+pub fn is_valid_command(command: &str, ctx: &Context) -> bool {
+    if ctx.aliases.contains_key(command) {
+        return true;
+    }
+
+    if command == "exit" || command == "cd" || command == "get" || command == "set" || command == "alias" {
         return true;
     }
 
@@ -180,13 +186,17 @@ pub fn is_valid_command(command: &str) -> bool {
     false
 }
 
-pub fn get_valid_commands() -> Vec<String> {
+pub fn get_valid_commands(ctx: &Context) -> Vec<String> {
     let mut cmds = vec![
         String::from("exit"),
         String::from("cd"),
         String::from("set"),
         String::from("get"),
+        String::from("alias"),
     ];
+
+    let mut aliases: Vec<String> = ctx.aliases.keys().map(|alias| alias.to_string()).collect();
+    cmds.append(&mut aliases);
 
     let paths = match env::var("PATH") {
         Ok(paths) => paths,

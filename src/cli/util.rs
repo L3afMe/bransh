@@ -32,7 +32,7 @@ pub fn print_cmd_buf(ctx: &mut Context, move_size: i16) {
         SavePosition,
         MoveLeft(pos as u16),
         Clear(ClearType::UntilNewLine),
-        PrintCmdBuf(ctx.command_buffer.clone(), &ctx),
+        PrintCmdBuf(ctx.command_buffer.clone(), ctx),
         RestorePosition,
     ) {
         print_error(ctx, format!("Unable to print command buffer! {}", why));
@@ -135,16 +135,16 @@ impl<'t> Command for PrintCmdBuf<'t> {
                         cmd_buf.push(buf_char);
                     }
                     continue;
-                } else {
-                    let command_str = if is_valid_command(&cmd_buf) {
-                        cmd_buf.clone().dark_green()
-                    } else {
-                        cmd_buf.clone().dark_red()
-                    };
-
-                    PrintStyledContent(command_str).write_ansi(writer).unwrap_or_else(|_| {});
-                    done_cmd = true;
                 }
+
+                let command_str = if is_valid_command(&cmd_buf, ctx) {
+                    cmd_buf.clone().dark_green()
+                } else {
+                    cmd_buf.clone().dark_red()
+                };
+
+                PrintStyledContent(command_str).write_ansi(writer).unwrap_or_else(|_| {});
+                done_cmd = true;
             }
 
             if last_buf_char == '\\' && !last_escaped {
@@ -173,10 +173,10 @@ impl<'t> Command for PrintCmdBuf<'t> {
                     .write_ansi(writer)
                     .unwrap_or_else(|_| {});
             } else if buf_char != '\\' {
-                let content = if in_quote != char::default() {
-                    buf_char.to_string().magenta()
-                } else {
+                let content = if in_quote == char::default() {
                     buf_char.to_string().reset()
+                } else {
+                    buf_char.to_string().magenta()
                 };
 
                 PrintStyledContent(content).write_ansi(writer).unwrap_or_else(|_| {});
@@ -187,7 +187,7 @@ impl<'t> Command for PrintCmdBuf<'t> {
         }
 
         if !done_cmd {
-            let command_str = if is_valid_command(&cmd_buf) {
+            let command_str = if is_valid_command(&cmd_buf, ctx) {
                 cmd_buf.dark_green()
             } else {
                 cmd_buf.dark_red()

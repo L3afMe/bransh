@@ -15,7 +15,7 @@ pub struct CommandBufferBackup {
 }
 
 impl CommandBufferBackup {
-    pub fn new(buffer: String, cursor: u16) -> Self {
+    pub const fn new(buffer: String, cursor: u16) -> Self {
         Self {
             buffer,
             cursor,
@@ -32,6 +32,7 @@ pub struct Context {
     pub tab:            TabContext,
     pub history:        HistoryContext,
     pub writer:         Stdout,
+    pub aliases:        HashMap<String, String>,
     pub variables:      HashMap<String, String>,
 }
 
@@ -55,6 +56,7 @@ impl Default for Context {
             tab:            TabContext::default(),
             history:        HistoryContext::default(),
             writer:         stdout(),
+            aliases:        HashMap::new(),
             variables:      vars,
         }
     }

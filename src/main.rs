@@ -5,7 +5,7 @@ mod script;
 mod options;
 
 fn main() {
-    let opts = options::parse_options();
+    let opts = options::parse();
 
     if opts.version {
         println!("Bransh v{}", env!("CARGO_PKG_VERSION"));

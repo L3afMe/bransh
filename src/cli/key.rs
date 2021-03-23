@@ -1,6 +1,6 @@
 use crossterm::event::{KeyCode, KeyModifiers};
 
-use super::{history::handle_history, util::print_error};
+use super::history::handle_history;
 use crate::{
     cli::{
         tabcomp::{clear_tab, handle_tab},
@@ -78,8 +78,7 @@ fn move_eol(ctx: &mut Context) {
 
 fn move_left(ctx: &mut Context) {
     if (ctx.cursor_pos.0 as usize) > ctx.prompt_len() {
-        let mut move_size = 1;
-        if ctx.current_key.modifiers == KeyModifiers::CONTROL {
+        let move_size = if ctx.current_key.modifiers == KeyModifiers::CONTROL {
             let pos = (ctx.cursor_pos.0 as usize) - ctx.prompt_len();
             let t = ctx.command_buffer.clone();
 
@@ -87,11 +86,13 @@ fn move_left(ctx: &mut Context) {
             let split_trim = split.trim_end();
             let trim_len = split.len() - split_trim.len();
 
-            move_size = match split_trim.rfind(' ') {
+            match split_trim.rfind(' ') {
                 Some(pos) => split_trim.len() - pos - 1 + trim_len,
-                None => split.len()
-            };
-        }
+                None => split.len(),
+            }
+        } else {
+            1
+        };
 
         move_cursor(ctx, -(move_size as i16));
     }
@@ -99,14 +100,14 @@ fn move_left(ctx: &mut Context) {
 
 fn move_right(ctx: &mut Context) {
     if (ctx.cursor_pos.0 as usize) < ctx.prompt_len() + ctx.command_buffer.len() {
-        let mut move_size = 1;
-        if ctx.current_key.modifiers == KeyModifiers::CONTROL {
+        let move_size = if ctx.current_key.modifiers == KeyModifiers::CONTROL {
             let pos = (ctx.cursor_pos.0 as usize) - ctx.prompt_len();
             let (_, split) = ctx.command_buffer.split_at(pos.min(ctx.command_buffer.len()));
 
-            // Add 1 to go to start of next word
-            move_size = split.find(' ').unwrap_or_else(|| split.len() - 1) + 1;
-        }
+            split.find(' ').unwrap_or_else(|| split.len() - 1) + 1
+        } else {
+            1
+        };
 
         move_cursor(ctx, move_size as i16);
     }

@@ -73,8 +73,9 @@ pub fn run_term(opts: Options) -> Result<()> {
                     break;
                 }
 
-                if !ctx.command_buffer.is_empty() {
-                    if let Err(why) = tokenize_command(ctx.command_buffer.clone()) {
+                let buffer = ctx.command_buffer.clone();
+                if !buffer.is_empty() {
+                    if let Err(why) = tokenize_command(buffer, &mut ctx) {
                         print_tokenization_error(&mut ctx, why);
                         continue;
                     }
