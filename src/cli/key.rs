@@ -1,6 +1,6 @@
 use crossterm::event::{KeyCode, KeyModifiers};
 
-use super::history::handle_history;
+use super::{history::handle_history, util::print_error};
 use crate::{
     cli::{
         tabcomp::{clear_tab, handle_tab},
@@ -81,9 +81,16 @@ fn move_left(ctx: &mut Context) {
         let mut move_size = 1;
         if ctx.current_key.modifiers == KeyModifiers::CONTROL {
             let pos = (ctx.cursor_pos.0 as usize) - ctx.prompt_len();
-            let (split, _) = ctx.command_buffer.split_at(pos.min(ctx.command_buffer.len()));
+            let t = ctx.command_buffer.clone();
 
-            move_size = split.len() - split.rfind(' ').unwrap_or_else(|| split.len());
+            let (split, _) = t.split_at(pos.min(ctx.command_buffer.len()));
+            let split_trim = split.trim_end();
+            let trim_len = split.len() - split_trim.len();
+
+            move_size = match split_trim.rfind(' ') {
+                Some(pos) => split_trim.len() - pos - 1 + trim_len,
+                None => split.len()
+            };
         }
 
         move_cursor(ctx, -(move_size as i16));
