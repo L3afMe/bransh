@@ -6,7 +6,12 @@ use crossterm::{
 };
 
 use crate::{
+    cli::{
+        key::handle_key,
+        util::{clear_error, format_prompt, print_error, print_line, print_prompt, print_tokenization_error},
+    },
     command::{execute, tokenize::tokenize_command},
+    options::Options,
     prelude::Context,
     script::load_rc,
 };
@@ -16,10 +21,7 @@ pub mod key;
 pub mod tabcomp;
 pub mod util;
 
-use key::handle_key;
-use util::{clear_error, format_prompt, print_error, print_line, print_prompt, print_tokenization_error};
-
-pub fn run_term() -> Result<()> {
+pub fn run_term(opts: Options) -> Result<()> {
     // Set dummy handler so that ctrl-c doesn't terminate
     // cli when running commands as raw mode is disabled.
     // Print line so that the last output line doesn't get
@@ -31,7 +33,9 @@ pub fn run_term() -> Result<()> {
 
     let mut ctx = Context::default();
 
-    load_rc(&mut ctx);
+    if opts.norc {
+        load_rc(&mut ctx);
+    }
 
     if let Err(why) = history::init_history() {
         println!("Unable to initialise history file! {}", why);

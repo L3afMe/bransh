@@ -12,6 +12,14 @@ mod get;
 mod set;
 pub mod tokenize;
 
+#[allow(clippy::field_reassign_with_default)]
+pub fn execute_once(command: String) {
+    let mut ctx = Context::default();
+    ctx.command_buffer = command;
+
+    execute(&mut ctx);
+}
+
 pub fn execute(ctx: &mut Context) -> Option<i32> {
     let tokenize_res = tokenize_command(ctx.command_buffer.clone());
     let tokenized = match tokenize_res {
