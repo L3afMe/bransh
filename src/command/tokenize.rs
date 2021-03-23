@@ -168,10 +168,6 @@ fn args_to_command(mut args: Vec<String>) -> Option<Command> {
         return None;
     }
 
-    if args.contains(&String::from("Testlol")) {
-        println!("{:?}", args);
-    }
-
     let cmd_name = args[0].clone();
     args.remove(0);
     let output_type;
