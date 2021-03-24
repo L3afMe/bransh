@@ -63,9 +63,7 @@ pub fn add_history(line: String) -> Result<(), Error> {
 }
 
 pub fn handle_history(ctx: &mut Context) {
-    if ctx.cli.current_key.code == KeyCode::Esc {
-        restore_backup(ctx);
-    } else if ctx.cli.current_key.code == KeyCode::Down {
+    if ctx.cli.current_key.code == KeyCode::Down {
         let history_len = ctx.cli.completion.list.len();
         if ctx.cli.completion.index as usize == history_len {
             print_error(ctx, "Reached start of history!");

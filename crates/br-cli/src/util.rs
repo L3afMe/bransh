@@ -125,7 +125,7 @@ impl<'t> Command for PrintCmdBuf<'t> {
 
         for buf_char in buffer.chars() {
             if !done_cmd {
-                if (cmd_buf.is_empty() || buf_char.is_alphanumeric()) || buf_char == '_' || buf_char == '-' {
+                if (cmd_buf.is_empty() || buf_char.is_alphanumeric()) || buf_char == '_' || buf_char == '-' || buf_char == '+' {
                     if buf_char == ' ' {
                         Print(" ").write_ansi(writer).unwrap_or_else(|_| {});
                     } else {

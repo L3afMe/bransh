@@ -3,8 +3,8 @@ use crossterm::event::{KeyCode, KeyModifiers};
 
 use crate::{
     history::handle_history,
-    tabcomp::{clear_tab, handle_tab},
-    util::{move_cursor, print_cmd_buf},
+    tabcomp::handle_tab,
+    util::{move_cursor, print_cmd_buf, restore_backup},
 };
 
 pub fn handle_key(ctx: &mut Context) -> bool {
@@ -35,10 +35,11 @@ pub fn handle_key(ctx: &mut Context) -> bool {
 }
 
 fn handle_esc(ctx: &mut Context) {
-    if ctx.cli.last_key.code == KeyCode::Tab {
-        clear_tab(ctx);
-    } else if ctx.cli.last_key.code == KeyCode::Up || ctx.cli.last_key.code == KeyCode::Down {
-        handle_history(ctx);
+    if ctx.cli.last_key.code == KeyCode::Tab
+        || ctx.cli.last_key.code == KeyCode::Up
+        || ctx.cli.last_key.code == KeyCode::Down
+    {
+        restore_backup(ctx);
     }
 }
 

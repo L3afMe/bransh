@@ -2,7 +2,7 @@ use br_data::{context::Context, options::Options};
 use br_parser::tokenize_command;
 use br_script::load_rc;
 use br_executer::execute;
-use br_builtin::load_builtins;
+use br_command::load_builtins;
 use crossterm::{
     cursor::position,
     event::{read, Event},
@@ -31,12 +31,11 @@ pub fn run_term(opts: Options) -> Result<()> {
     .expect("Unable to setup ctrl-c handler");
 
     let mut ctx = Context::default();
+    load_builtins(&mut ctx);
 
-    if opts.norc {
+    if !opts.norc {
         load_rc(&mut ctx);
     }
-
-    load_builtins(&mut ctx);
 
     if let Err(why) = history::init_history() {
         println!("Unable to initialise history file! {}", why);
@@ -76,7 +75,7 @@ pub fn run_term(opts: Options) -> Result<()> {
 
                 let buffer = ctx.cli.command_buffer.clone();
                 if !buffer.is_empty() {
-                    if let Err(why) = tokenize_command(buffer, &mut ctx) {
+                    if let Err(why) = tokenize_command(buffer, &ctx) {
                         print_tokenization_error(&mut ctx, why);
                         continue;
                     }

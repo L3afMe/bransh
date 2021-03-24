@@ -1,11 +1,21 @@
-use br_data::{
-    command::{BrBuiltin, ExecuteFn},
-    context::Context,
-};
+use br_data::{command::{BrBuiltin, ExecuteFn, TabCompletion, TabCompletionFn, TabCompletionType}, context::Context};
 
-pub const CMD: BrBuiltin = BrBuiltin {
-    name: "alias",
-    execute,
+lazy_static!{
+    pub static ref CMD: BrBuiltin = BrBuiltin {
+        name: "alias",
+        tab_completion: TabCompletionType::Static(vec![
+            TabCompletion::new("list", TabCompletionType::None),
+            TabCompletion::new("del", TabCompletionType::Dynamic(tc_alias_list)),
+            TabCompletion::new("get", TabCompletionType::Dynamic(tc_alias_list)),
+            TabCompletion::new("set", TabCompletionType::None)
+        ]),
+        execute,
+    };
+}
+
+#[allow(non_upper_case_globals)]
+const tc_alias_list: TabCompletionFn = |_args: Vec<String>, ctx: &Context| -> Vec<String> {
+    ctx.aliases.keys().map(|key| key.to_string()).collect()
 };
 
 #[allow(non_upper_case_globals)]

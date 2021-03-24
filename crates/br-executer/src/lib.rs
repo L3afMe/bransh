@@ -3,7 +3,7 @@ use std::{
     process::{Child, Command, Stdio},
 };
 
-use br_builtin::load_builtins;
+use br_command::load_builtins;
 use br_data::context::Context;
 use br_parser::{tokenize_command, OutputType, TokenizationError};
 
@@ -109,21 +109,19 @@ pub fn execute(ctx: &mut Context) -> Option<i32> {
                         }
 
                         match cmd_child.wait() {
-                            Ok(exit_status) => {
-                                match exit_status.code() {
-                                    Some(code) => {
-                                        output = code;
+                            Ok(exit_status) => match exit_status.code() {
+                                Some(code) => {
+                                    output = code;
+                                },
+                                None => match exit_status.signal() {
+                                    Some(signal) => {
+                                        output = 128 + signal;
                                     },
-                                    None => match exit_status.signal() {
-                                        Some(signal) => {
-                                            output = 128 + signal;
-                                        },
-                                        None => {
-                                            eprintln!("Status terminated with no exit status!");
-                                            output = 0;
-                                        },
+                                    None => {
+                                        eprintln!("Status terminated with no exit status!");
+                                        output = 0;
                                     },
-                                }
+                                },
                             },
                             Err(why) => {
                                 eprintln!("Unable to execute command! {}", why);

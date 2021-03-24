@@ -1,10 +1,14 @@
 use std::{env, path::Path};
 
-use br_data::{command::{BrBuiltin, ExecuteFn}, context::Context};
+use br_data::{
+    command::{BrBuiltin, ExecuteFn, TabCompletionType},
+    context::Context,
+};
 
 pub const CMD: BrBuiltin = BrBuiltin {
     name: "cd",
-    execute
+    tab_completion: TabCompletionType::Directory,
+    execute,
 };
 
 #[allow(non_upper_case_globals)]

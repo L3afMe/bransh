@@ -1,5 +1,5 @@
 [package]
-name = "br-builtin"
+name = "br-command"
 version = "0.1.0"
 authors = ["L3af <L3afMeAlon3@gmail.com>"]
 edition = "2018"
@@ -10,3 +10,4 @@ edition = "2018"
 br-data = { path = "../br-data" }
 
 home = "0.5.3"
+lazy_static = "1.4.0"

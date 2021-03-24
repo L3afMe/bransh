@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-br-builtin  = { path = "../br-builtin"  }
+br-command  = { path = "../br-command"  }
 br-data     = { path = "../br-data"     }
 br-executer = { path = "../br-executer" }
 br-parser   = { path = "../br-parser"   }
