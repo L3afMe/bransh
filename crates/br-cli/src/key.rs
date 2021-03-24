@@ -123,7 +123,7 @@ fn handle_backspace(ctx: &mut Context) {
 
 fn handle_delete(ctx: &mut Context) {
     let x = ctx.cli.cursor_pos.0 as usize;
-    if x > ctx.cli.prompt_len() {
+    if x < ctx.cli.prompt_len() + ctx.cli.command_buffer.len() {
         let pos = x - ctx.cli.prompt_len();
         ctx.cli.command_buffer.remove(pos);
         print_cmd_buf(ctx, 0);
