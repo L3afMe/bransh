@@ -7,7 +7,7 @@ use br_data::{
 
 pub const CMD: BrBuiltin = BrBuiltin {
     name: "cd",
-    tab_completion: TabCompletionType::Directory,
+    tab_completion: TabCompletionType::Directory(Vec::new()),
     execute,
 };
 

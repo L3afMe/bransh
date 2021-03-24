@@ -14,8 +14,13 @@ lazy_static!{
 }
 
 #[allow(non_upper_case_globals)]
-const tc_alias_list: TabCompletionFn = |_args: Vec<String>, ctx: &Context| -> Vec<String> {
-    ctx.aliases.keys().map(|key| key.to_string()).collect()
+const tc_alias_list: TabCompletionFn = |args: Vec<String>, ctx: &Context| -> Vec<String> {
+    if args.len() <= 1 {
+        let cur_arg = if let Some(arg) = args.get(0) { arg.clone() } else { String::new() };
+        ctx.aliases.keys().map(|key| key.to_string()).filter(|key| key.starts_with(&cur_arg)).collect()
+    } else {
+        Vec::new()
+    }
 };
 
 #[allow(non_upper_case_globals)]

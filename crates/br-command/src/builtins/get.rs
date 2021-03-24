@@ -1,3 +1,5 @@
+use std::env;
+
 use br_data::{
     command::{BrBuiltin, ExecuteFn, TabCompletionFn, TabCompletionType},
     context::Context,
@@ -10,8 +12,33 @@ pub const CMD: BrBuiltin = BrBuiltin {
 };
 
 #[allow(non_upper_case_globals)]
-const tc_var_list: TabCompletionFn =
-    |_args: Vec<String>, ctx: &Context| -> Vec<String> { ctx.aliases.keys().map(|key| key.to_string()).collect() };
+pub const tc_var_list: TabCompletionFn = |args: Vec<String>, ctx: &Context| -> Vec<String> {
+    if args.len() <= 1 {
+        let mut cur_arg = if let Some(arg) = args.get(0) {
+            arg.clone()
+        } else {
+            String::new()
+        };
+
+        let is_env = cur_arg.starts_with("ENV:");
+        if is_env {
+            let (_, arg) = cur_arg.split_at(4);
+            cur_arg = arg.to_string();
+        }
+
+        let args: Vec<String> = if is_env {
+            env::vars().map(|(key, _)| key).collect()
+        } else {
+            ctx.variables.keys().map(|key| key.to_string()).collect()
+        };
+
+       args.into_iter() 
+            .filter(|key| key.starts_with(&cur_arg))
+            .collect()
+    } else {
+        Vec::new()
+    }
+};
 
 #[allow(non_upper_case_globals)]
 const execute: ExecuteFn = |args: Vec<String>, ctx: &mut Context| -> i32 {

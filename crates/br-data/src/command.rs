@@ -8,9 +8,9 @@ pub type TabCompletionFn = fn(Vec<String>, &Context) -> Vec<String>;
 #[derive(Clone)]
 pub enum TabCompletionType {
     None,
-    Directory,
-    File,
-    FileOrDirectory,
+    Directory(Vec<TabCompletion>),
+    File(Vec<TabCompletion>),
+    FileOrDirectory(Vec<TabCompletion>),
     Static(Vec<TabCompletion>),
     Dynamic(TabCompletionFn),
 }

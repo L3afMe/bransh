@@ -27,9 +27,9 @@ pub fn get_tab_completion(cmd: String, args: Vec<String>, ctx: &mut Context) -> 
 
 fn get_comp(tc_type: TabCompletionType, args: Vec<String>, ctx: &mut Context) -> Vec<String> {
     match tc_type {
-        TabCompletionType::File
-        | TabCompletionType::Directory
-        | TabCompletionType::FileOrDirectory
+        TabCompletionType::File(_)
+        | TabCompletionType::Directory(_)
+        | TabCompletionType::FileOrDirectory(_)
         | TabCompletionType::None => Vec::new(),
         TabCompletionType::Dynamic(fun) => (fun)(args, ctx),
         TabCompletionType::Static(comp) => {

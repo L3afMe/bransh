@@ -1,17 +1,15 @@
 use br_data::{
-    command::{BrBuiltin, ExecuteFn, TabCompletionFn, TabCompletionType},
+    command::{BrBuiltin, ExecuteFn, TabCompletionType},
     context::Context,
 };
+
+use super::get::tc_var_list;
 
 pub const CMD: BrBuiltin = BrBuiltin {
     name: "set",
     tab_completion: TabCompletionType::Dynamic(tc_var_list),
     execute,
 };
-
-#[allow(non_upper_case_globals)]
-const tc_var_list: TabCompletionFn =
-    |_args: Vec<String>, ctx: &Context| -> Vec<String> { ctx.aliases.keys().map(|key| key.to_string()).collect() };
 
 #[allow(non_upper_case_globals)]
 const execute: ExecuteFn = |args: Vec<String>, ctx: &mut Context| -> i32 {
