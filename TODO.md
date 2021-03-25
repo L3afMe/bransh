@@ -1,15 +1,17 @@
-- [ ] Config in brainfuck
-- [x] branshrc.br
-- [x] cli flags
-- [x] Ctrl-C term running process
-- [ ] Write new lang
-- [x] Handle multi-word args
-- [x] Piping stdout/err
-- [ ] '&&' and '||'
-- [x] ';' splitting
-- [x] Background processes
-- [x] Command tab completion
-- [ ] Sudo/doas on double escape
-- [ ] File tab completion
-- [ ] Command arg tab completion
-- [ ] Fix cd traversing
+# Bransh TODO
+
+### General Additions
+- Sudo/doas on double escape
+- Tab completion
+  - File names
+  - Non builtin command tab completion definition
+- Right aligned prompt
+
+### Bug Fixes
+- General
+  - `cd` traversing
+  - Multiline input and top error msgs
+- Windows Specific
+  - Get config dir
+- Unix Specific
+  - Expand `~user`
