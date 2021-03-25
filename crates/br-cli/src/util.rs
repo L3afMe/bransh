@@ -1,7 +1,9 @@
 use std::{env, fmt};
 
+use logos::Logos;
+
 use br_data::context::Context;
-use br_parser::{TokenizationError, is_valid_command};
+use br_parser::{is_valid_command, lexer::Token, parser::ParseError};
 use crossterm::{
     cursor::{MoveLeft, MoveRight, MoveToNextLine, MoveToPreviousLine, RestorePosition, SavePosition},
     execute,
@@ -104,97 +106,39 @@ impl<'t> Command for PrintCmdBuf<'t> {
             return write!(writer, "{}", command_buffer);
         }
 
-        let mut buffer = command_buffer.trim_start();
+        let mut lexer = Token::lexer(&command_buffer);
+        let mut last_token: Option<Token> = None;
+        while let Some(token) = lexer.next() {
+            let token_str = lexer.slice();
 
-        // Store trim size so syntax positions are correct
-        let left_trim_size = command_buffer.len() - buffer.len();
-        buffer = buffer.trim_end();
-        write!(writer, "{}", " ".repeat(left_trim_size))?;
-
-        if buffer.is_empty() {
-            return Ok(());
-        }
-
-        let mut in_quote = char::default();
-
-        let mut last_buf_char = char::default();
-        let mut last_escaped = false;
-
-        let mut done_cmd = false;
-        let mut cmd_buf = String::new();
-
-        for buf_char in buffer.chars() {
-            if !done_cmd {
-                if (cmd_buf.is_empty() || buf_char.is_alphanumeric()) || buf_char == '_' || buf_char == '-' || buf_char == '+' {
-                    if buf_char == ' ' {
-                        Print(" ").write_ansi(writer).unwrap_or_else(|_| {});
-                    } else {
-                        cmd_buf.push(buf_char);
-                    }
-                    continue;
+            let colored = if last_token == None 
+                    || matches!(last_token.clone(), Some(Token::Output(_))) {
+                if is_valid_command(&token_str, ctx) {
+                    token_str.dark_green()
+                } else {
+                    token_str.dark_red()
                 }
-
-                let command_str = if is_valid_command(&cmd_buf, ctx) {
-                    cmd_buf.clone().dark_green()
-                } else {
-                    cmd_buf.clone().dark_red()
-                };
-
-                PrintStyledContent(command_str)
-                    .write_ansi(writer)
-                    .unwrap_or_else(|_| {});
-                done_cmd = true;
-            }
-
-            if last_buf_char == '\\' && !last_escaped {
-                last_escaped = true;
-                last_buf_char = buf_char;
-
-                PrintStyledContent(format!("\\{}", buf_char).dark_blue())
-                    .write_ansi(writer)
-                    .unwrap_or_else(|_| {});
-                continue;
-            } else if buf_char == '\'' || buf_char == '"' {
-                if in_quote == char::default() {
-                    in_quote = buf_char;
-                } else if in_quote == buf_char {
-                    in_quote = char::default();
-                };
-
-                PrintStyledContent(buf_char.to_string().magenta())
-                    .write_ansi(writer)
-                    .unwrap_or_else(|_| {});
-            } else if (buf_char == ';' || buf_char == '|') && in_quote == char::default() {
-                done_cmd = false;
-                cmd_buf = String::new();
-
-                PrintStyledContent(buf_char.to_string().reset())
-                    .write_ansi(writer)
-                    .unwrap_or_else(|_| {});
-            } else if buf_char != '\\' {
-                let content = if in_quote == char::default() {
-                    buf_char.to_string().reset()
-                } else {
-                    buf_char.to_string().magenta()
-                };
-
-                PrintStyledContent(content).write_ansi(writer).unwrap_or_else(|_| {});
-            }
-
-            last_escaped = false;
-            last_buf_char = buf_char;
-        }
-
-        if !done_cmd {
-            let command_str = if is_valid_command(&cmd_buf, ctx) {
-                cmd_buf.dark_green()
             } else {
-                cmd_buf.dark_red()
+                match token {
+                    Token::Comment => token_str.dark_magenta(),
+                    Token::Error => token_str.dark_red(),
+                    Token::Whitespace
+                        | Token::Word => token_str.reset(),
+                    Token::Output(_)
+                        | Token::Background => token_str.dark_blue(),
+                    Token::Variable(_) => token_str.dark_yellow(),
+                    Token::StringLiteral(_) => token_str.magenta(),
+                    Token::NumberLiteral => token_str.red(),
+                }
             };
 
-            PrintStyledContent(command_str)
-                .write_ansi(writer)
-                .unwrap_or_else(|_| {});
+            PrintStyledContent(colored).write_ansi(writer).unwrap();
+
+            if token == Token::Whitespace {
+                continue;
+            }
+
+            last_token = Some(token);
         }
 
         Ok(())
@@ -261,15 +205,8 @@ pub fn format_prompt(ctx: &mut Context) {
     ctx.cli.prompt = prompt_format;
 }
 
-pub fn print_tokenization_error(ctx: &mut Context, error: TokenizationError) {
-    let error_str = match error {
-        TokenizationError::UnterminateQuote(pos, chr) => format!("Unterminated string ({}) at pos {}", chr, pos),
-        TokenizationError::InvalidEscape(pos, chr) => format!("Invalid escape code (\\{}) at pos {}", chr, pos),
-        TokenizationError::UnexpectedValue(pos, val_exp, val_got) => {
-            format!("Unexpected value at pos {}, expected {}, got {}", pos, val_exp, val_got)
-        },
-    };
-
+pub fn print_tokenization_error(ctx: &mut Context, error: ParseError) {
+    let error_str = format!("{}", error);
     print_error(ctx, error_str);
 }
 

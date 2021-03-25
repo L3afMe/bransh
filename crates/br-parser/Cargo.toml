@@ -8,3 +8,6 @@ edition = "2018"
 
 [dependencies]
 br-data = { path = "../br-data" }
+
+logos = "0.12.0"
+home = "0.5.3"

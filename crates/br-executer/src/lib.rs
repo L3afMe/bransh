@@ -1,11 +1,8 @@
-use std::{
-    os::unix::process::ExitStatusExt,
-    process::{Child, Command, Stdio},
-};
+use std::{os::unix::process::ExitStatusExt, path::PathBuf, process::{Child, Command, Stdio}, str::FromStr};
 
 use br_command::load_builtins;
 use br_data::context::Context;
-use br_parser::{tokenize_command, OutputType, TokenizationError};
+use br_parser::{OutputType, can_exec, parse_command};
 
 #[allow(clippy::field_reassign_with_default)]
 pub fn execute_once(command: String) {
@@ -17,27 +14,17 @@ pub fn execute_once(command: String) {
 }
 
 pub fn execute(ctx: &mut Context) -> Option<i32> {
-    let tokenize_res = tokenize_command(ctx.cli.command_buffer.clone(), ctx);
-    let tokenized = match tokenize_res {
-        Ok(val) => val,
+    let commands_wrapped = parse_command(ctx.cli.command_buffer.clone(), ctx);
+    let commands = match commands_wrapped {
+        Ok(cmds) => cmds,
         Err(why) => {
-            match why {
-                TokenizationError::UnterminateQuote(pos, chr) => {
-                    eprintln!("Unterminated string ({}) at pos {}", chr, pos);
-                },
-                TokenizationError::InvalidEscape(pos, chr) => {
-                    eprintln!("Invalid escape code (\\{}) at pos {}", chr, pos);
-                },
-                TokenizationError::UnexpectedValue(pos, val_exp, val_got) => {
-                    eprintln!("Unexpected value at pos {}, expected {}, got {}", pos, val_exp, val_got);
-                },
-            }
+            eprintln!("{}", why);
 
             return Some(-1);
         },
     };
 
-    if tokenized.is_empty() {
+    if commands.is_empty() {
         return Some(0);
     }
 
@@ -45,10 +32,11 @@ pub fn execute(ctx: &mut Context) -> Option<i32> {
     let mut last_output = 0;
     let mut joiner = OutputType::Ignore;
 
-    let mut commands = tokenized.into_iter().peekable();
-    'cmdloop: while let Some(cmd) = commands.next() {
+    let mut commands = commands.into_iter().peekable();
+    'cmdloop: while let Some(mut cmd) = commands.next() {
         match joiner {
-            OutputType::Ignore => {},
+            OutputType::Ignore
+                | OutputType::Pipe => {},
             OutputType::Depend => {
                 if last_output != 0 {
                     continue;
@@ -59,13 +47,22 @@ pub fn execute(ctx: &mut Context) -> Option<i32> {
                     continue;
                 }
             },
-            OutputType::Pipe => {},
+            OutputType::Redirect => {},
+            OutputType::RedirectAppend => {}
         }
         let mut output = 0;
 
         match cmd.command.as_ref() {
             "exit" => return None,
             _ => {
+                if cmd.command.starts_with('.') || cmd.command.starts_with('/') {
+                    let file = PathBuf::from_str(&cmd.command).unwrap();
+                    if file.exists() && file.is_dir() {
+                        cmd.command = String::from("cd");
+                        cmd.args.insert(0, file.to_str().unwrap().to_string());
+                    }
+                }
+
                 for builtin in ctx.builtins.clone() {
                     if builtin.name == cmd.command {
                         output = (builtin.execute)(cmd.args.clone(), ctx);
