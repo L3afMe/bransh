@@ -24,7 +24,8 @@ pub fn get_tab_completion(cmd: String, args: Vec<String>, ctx: &mut Context) -> 
         }
     }
 
-    Vec::new()
+    let arg = args.into_iter().last().unwrap_or_default();
+    get_file(FileType::Both, arg)
 }
 
 #[derive(Debug, PartialEq)]
