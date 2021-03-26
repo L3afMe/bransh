@@ -140,6 +140,8 @@ pub fn parse_lex(mut lex: Lexer<Token>, ctx: &Context) -> Result<CommandList, Pa
     Ok(cmd_list)
 }
 
+// Make cargo stop complaining about functions used for tests
+#[allow(unused_imports, dead_code)]
 mod test {
     use logos::Logos;
     use br_data::context::Context;

@@ -2,7 +2,7 @@ use std::{os::unix::process::ExitStatusExt, path::PathBuf, process::{Child, Comm
 
 use br_command::load_builtins;
 use br_data::context::Context;
-use br_parser::{OutputType, can_exec, parse_command};
+use br_parser::{OutputType, parse_command};
 
 #[allow(clippy::field_reassign_with_default)]
 pub fn execute_once(command: String) {

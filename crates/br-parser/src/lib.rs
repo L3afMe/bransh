@@ -1,4 +1,4 @@
-use std::{env, fs::Metadata, os::unix::prelude::MetadataExt, path::{Path, PathBuf}, str::FromStr};
+use std::{env, fs::Metadata, os::unix::prelude::MetadataExt, path::PathBuf, str::FromStr};
 
 use br_data::context::Context;
 use lexer::Token;

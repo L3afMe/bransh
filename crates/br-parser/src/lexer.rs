@@ -59,12 +59,14 @@ impl Default for Token {
     }
 }
 
+// Make cargo stop complaining about functions used for tests
+#[allow(unused_imports, dead_code)]
 mod test{
     use std::ops::Range;
 
     use logos::Logos;
 
-    use crate::{OutputType};
+    use crate::OutputType;
     use super::Token::{*, self};
 
     fn assert_seq(test_str: &str, expected: Vec<(Token, Range<usize>, &str)>) {
