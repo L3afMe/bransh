@@ -3,7 +3,7 @@ extern crate lazy_static;
 
 mod builtins;
 
-use std::{env, ffi::OsStr, path::PathBuf, str::FromStr};
+use std::{ffi::OsStr, path::PathBuf, str::FromStr};
 
 use br_data::{command::TabCompletionType, context::Context};
 
@@ -51,6 +51,7 @@ fn get_comp(tc_type: TabCompletionType, args: Vec<String>, ctx: &mut Context) ->
         TabCompletionType::File(subargs)
         | TabCompletionType::Directory(subargs)
         | TabCompletionType::FileOrDirectory(subargs) => {
+            ctx.cli.completion.delim = String::from("/");
             let mut itr = args.into_iter().peekable();
             let arg = itr.next().unwrap();
 
@@ -96,24 +97,12 @@ fn get_comp(tc_type: TabCompletionType, args: Vec<String>, ctx: &mut Context) ->
 }
 
 fn get_file(file_type: FileType, mut arg: String) -> Vec<String> {
-    let mut trim_cur_dir = None;
-    if arg.is_empty() {
-        arg = if let Ok(path) = env::current_dir() {
-            let path = format!("{}/", path.to_str().unwrap_or("/"));
-            trim_cur_dir = Some(path.clone());
-
-            path
-        } else {
-            return Vec::new();
-        }
-    }
-
     let mut trim_home_dir = None;
-    if arg.starts_with('~') {
+    if arg.starts_with('~') { 
         if arg.starts_with("~/") || arg == "~" {
             let home_dir = match home::home_dir() {
                 Some(home_dir) => home_dir.to_string_lossy().to_string(),
-                None => String::from("~"),
+                None => String::from("~")
             };
 
             trim_home_dir = Some(home_dir.clone());
@@ -123,23 +112,15 @@ fn get_file(file_type: FileType, mut arg: String) -> Vec<String> {
         }
     }
 
-    // This should never panic but if it does replace it with
-    // the comment below
-    let (path, cur_entry) = arg.rsplit_once("/").unwrap();
+    let mut print_cur_path = true;
+    let (cur_path, cur_entry) = if let Some(path) = arg.rsplit_once("/") {
+        path
+    } else {
+        print_cur_path = false;
+        (".", arg.as_str())
+    };
 
-    // let (path, cur_entry) = if arg.contains('/') {
-    //     let (lh, rh) = arg.rsplit_once("/").unwrap();
-
-    //     (lh.to_string(), rh.to_string())
-    // } else {
-    //     let dir = env::current_dir().unwrap();
-    //     let path = dir.to_string_lossy().to_string();
-
-    //     trim_cur_dir = Some(path.clone());
-    //     (path, arg)
-    // };
-
-    let path = PathBuf::from_str(&path).unwrap();
+    let path = PathBuf::from_str(&cur_path).unwrap();
     let children_wrapped = path.read_dir();
     if !path.exists() || children_wrapped.is_err() {
         return Vec::new();
@@ -148,29 +129,31 @@ fn get_file(file_type: FileType, mut arg: String) -> Vec<String> {
     let mut output: Vec<String> = children_wrapped
         .unwrap()
         .filter(|child| child.is_ok())
-        .map(|child| child.unwrap().path())
-        .filter(|child| {
-            (file_type == FileType::Directory && child.is_dir())
-                || (file_type == FileType::File && child.is_file())
-                || file_type == FileType::Both
-        })
-        .filter(|child| {
-            child
-                .file_name()
-                .unwrap_or_else(|| OsStr::new(""))
-                .to_string_lossy()
-                .starts_with(&cur_entry)
-        })
-        .map(|child| child.to_str().unwrap_or("").to_string())
-        .map(|mut child| {
-            if let Some(home_dir) = trim_home_dir.clone() {
-                child = format!("~{}", child.strip_prefix(&home_dir).unwrap());
-            }
-            if let Some(cur_dir) = trim_cur_dir.clone() {
-                child = child.strip_prefix(&cur_dir).unwrap().to_string();
+        .map(|child| child
+            .unwrap()
+            .path())
+        .filter(|child| 
+            (file_type == FileType::Directory && child.is_dir()) ||
+            (file_type == FileType::File && child.is_file())     ||
+             file_type == FileType::Both)
+        .map(|child| child
+            .file_name()
+            .unwrap_or_else(|| OsStr::new(""))
+            .to_string_lossy()
+            .to_string())
+        .filter(|child| child
+            .starts_with(cur_entry))
+        .map(|child| {
+            let mut path = cur_path.to_string();
+            if let Some(home) = trim_home_dir.clone() {
+                path = path.replace(&home, "~");
             }
 
-            child
+            if print_cur_path {
+                format!("{}/{}", path, child)
+            } else {
+                child
+            }
         })
         .collect();
 
@@ -178,3 +161,4 @@ fn get_file(file_type: FileType, mut arg: String) -> Vec<String> {
 
     output
 }
+

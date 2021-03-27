@@ -24,11 +24,24 @@ impl CommandBufferBackup {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct CompletionContext {
     pub list:   Vec<String>,
+    pub delim:  String,
     pub index:  u16,
     pub backup: CommandBufferBackup,
+}
+
+impl Default for CompletionContext {
+    fn default() -> Self {
+        Self {
+            list: Vec::default(),
+            delim: String::from(" "),
+            index: 0,
+            backup: CommandBufferBackup::default()
+        }
+    }
+
 }
 
 #[derive(Debug, Clone)]

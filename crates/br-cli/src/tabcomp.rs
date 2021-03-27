@@ -67,7 +67,7 @@ pub fn handle_tab(ctx: &mut Context) {
 
     if ctx.cli.completion.list.len() == 1 {
         let mut new_arg = ctx.cli.completion.list[0].clone();
-        new_arg.push(' ');
+        new_arg.push_str(&ctx.cli.completion.delim);
         do_comp(&new_arg, trimmed_command, trim_size, &old_buf, after_cursor, ctx);
 
         ctx.cli.current_key.code = KeyCode::Null;
