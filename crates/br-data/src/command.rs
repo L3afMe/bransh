@@ -17,7 +17,7 @@ pub enum TabCompletionType {
 
 #[derive(Clone)]
 pub struct TabCompletion {
-    pub arg: String,
+    pub arg:     String,
     pub subargs: TabCompletionType,
 }
 
@@ -25,20 +25,20 @@ impl TabCompletion {
     pub fn new(arg: &str, subargs: TabCompletionType) -> Self {
         Self {
             arg: arg.to_string(),
-            subargs
+            subargs,
         }
     }
 }
 
 #[derive(Clone)]
 pub struct BrBuiltin {
-    pub name: &'static str,
-    pub execute: ExecuteFn,
+    pub name:           &'static str,
+    pub execute:        ExecuteFn,
     pub tab_completion: TabCompletionType,
 }
 
 impl fmt::Debug for BrBuiltin {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("BrBuiltin").field("name", &self.name).finish()      
+        f.debug_struct("BrBuiltin").field("name", &self.name).finish()
     }
 }

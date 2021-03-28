@@ -1,8 +1,8 @@
+use br_command::load_builtins;
 use br_data::{context::Context, options::Options};
+use br_executer::execute;
 use br_parser::parse_command;
 use br_script::load_rc;
-use br_executer::execute;
-use br_command::load_builtins;
 use crossterm::{
     cursor::position,
     event::{read, Event},

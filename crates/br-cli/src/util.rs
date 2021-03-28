@@ -1,7 +1,5 @@
 use std::{env, fmt};
 
-use logos::Logos;
-
 use br_data::context::Context;
 use br_parser::{is_valid_command, lexer::Token, parser::ParseError};
 use crossterm::{
@@ -11,6 +9,7 @@ use crossterm::{
     terminal::{Clear, ClearType},
     Command,
 };
+use logos::Logos;
 
 pub fn move_cursor(ctx: &mut Context, move_size: i16) {
     if let Err(why) = if move_size >= 1 {
@@ -111,8 +110,7 @@ impl<'t> Command for PrintCmdBuf<'t> {
         while let Some(token) = lexer.next() {
             let token_str = lexer.slice();
 
-            let colored = if last_token == None 
-                    || matches!(last_token.clone(), Some(Token::Output(_))) {
+            let colored = if last_token == None || matches!(last_token.clone(), Some(Token::Output(_))) {
                 if is_valid_command(&token_str, ctx) {
                     token_str.dark_green()
                 } else {
@@ -122,10 +120,8 @@ impl<'t> Command for PrintCmdBuf<'t> {
                 match token {
                     Token::Comment => token_str.dark_magenta(),
                     Token::Error => token_str.dark_red(),
-                    Token::Whitespace
-                        | Token::Word => token_str.reset(),
-                    Token::Output(_)
-                        | Token::Background => token_str.dark_blue(),
+                    Token::Whitespace | Token::Word => token_str.reset(),
+                    Token::Output(_) | Token::Background => token_str.dark_blue(),
                     Token::Variable(_) => token_str.dark_yellow(),
                     Token::StringLiteral(_) => token_str.magenta(),
                     Token::NumberLiteral => token_str.red(),
@@ -145,7 +141,7 @@ impl<'t> Command for PrintCmdBuf<'t> {
     }
 
     #[cfg(windows)]
-    fn execute_winapi(&self, mut writer: impl FnMut() -> Result<()>) -> Result<()> {
+    fn execute_winapi(&self, mut writer: impl FnMut() -> crossterm::Result<()>) -> crossterm::Result<()> {
         writer()
     }
 }
@@ -176,7 +172,8 @@ pub fn format_prompt(ctx: &mut Context) {
 
         let dir_trunc = ctx.get_variable("P_DIR_TRUNC", 2, false);
         if dir_trunc != 0 {
-            let split: Vec<&str> = working_dir.split('/').collect();
+            let split_char = if cfg!(windows) { '\\' } else { '/' };
+            let split: Vec<&str> = working_dir.split(split_char).collect();
             if split.len() > dir_trunc {
                 let dir_trunc_char = ctx.get_variable("P_DIR_CHAR", String::from("…"), false);
                 let (_, trunc_dirs) = split.split_at(split.len() - dir_trunc);

@@ -4,7 +4,10 @@ use std::{
     path::Path,
 };
 
-use br_data::{context::{CommandBufferBackup, Context}, get_config_dir};
+use br_data::{
+    context::{CommandBufferBackup, Context},
+    get_config_dir,
+};
 use crossterm::event::KeyCode;
 
 use crate::util::{print_cmd_buf, print_error, restore_backup};
@@ -77,7 +80,13 @@ pub fn handle_history(ctx: &mut Context) {
             return;
         }
 
-        let new_buf = ctx.cli.completion.list.get(ctx.cli.completion.index as usize).unwrap().to_string();
+        let new_buf = ctx
+            .cli
+            .completion
+            .list
+            .get(ctx.cli.completion.index as usize)
+            .unwrap()
+            .to_string();
         let buf_dif = (new_buf.len() as i16) - (ctx.cli.command_buffer.len() as i16);
         ctx.cli.command_buffer = new_buf;
         print_cmd_buf(ctx, buf_dif);
@@ -108,7 +117,13 @@ pub fn handle_history(ctx: &mut Context) {
             ctx.cli.completion.index -= 1;
         }
 
-        let new_buf = ctx.cli.completion.list.get(ctx.cli.completion.index as usize).unwrap().to_string();
+        let new_buf = ctx
+            .cli
+            .completion
+            .list
+            .get(ctx.cli.completion.index as usize)
+            .unwrap()
+            .to_string();
         let buf_dif = (new_buf.len() as i16) - (ctx.cli.command_buffer.len() as i16);
         ctx.cli.command_buffer = new_buf;
         print_cmd_buf(ctx, buf_dif);

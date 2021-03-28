@@ -1,5 +1,4 @@
-use logos::Logos;
-use logos::Lexer;
+use logos::{Lexer, Logos};
 
 use crate::OutputType;
 
@@ -27,7 +26,6 @@ impl From<&mut Lexer<'_, Token>> for OutputType {
             _ => OutputType::Ignore,
         }
     }
-
 }
 
 #[derive(Logos, Debug, PartialEq, Clone, Eq, Hash)]
@@ -59,15 +57,16 @@ impl Default for Token {
     }
 }
 
-// Make cargo stop complaining about functions used for tests
+// Make cargo stop complaining about functions used for
+// tests
 #[allow(unused_imports, dead_code)]
-mod test{
+mod test {
     use std::ops::Range;
 
     use logos::Logos;
 
+    use super::Token::{self, *};
     use crate::OutputType;
-    use super::Token::{*, self};
 
     fn assert_seq(test_str: &str, expected: Vec<(Token, Range<usize>, &str)>) {
         let mut lexer = Token::lexer(test_str);
@@ -83,38 +82,32 @@ mod test{
 
     #[test]
     fn variables() {
-        assert_seq(
-            "echo $ENV:HOME; echo $PROMPT",
-            vec![
-                (Word,                                       0.. 4, "echo"     ),
-                (Whitespace,                                 4.. 5, " "        ),
-                (Variable((String::from("HOME"), true)),     5..14, "$ENV:HOME"),
-                (Output(OutputType::Ignore),                14..15, ";"        ),
-                (Whitespace,                                15..16, " "        ),
-                (Word,                                      16..20, "echo"     ),
-                (Whitespace,                                20..21, " "        ),
-                (Variable((String::from("PROMPT"), false)), 21..28, "$PROMPT"  ),
-            ],
-        )
+        assert_seq("echo $ENV:HOME; echo $PROMPT", vec![
+            (Word, 0..4, "echo"),
+            (Whitespace, 4..5, " "),
+            (Variable((String::from("HOME"), true)), 5..14, "$ENV:HOME"),
+            (Output(OutputType::Ignore), 14..15, ";"),
+            (Whitespace, 15..16, " "),
+            (Word, 16..20, "echo"),
+            (Whitespace, 20..21, " "),
+            (Variable((String::from("PROMPT"), false)), 21..28, "$PROMPT"),
+        ])
     }
 
     #[test]
     fn piping() {
-        assert_seq(
-            "> | >> || && ;",
-            vec![
-                (Output(OutputType::Redirect),       0.. 1, ">" ),
-                (Whitespace,                         1.. 2, " " ),
-                (Output(OutputType::Pipe),           2.. 3, "|" ),
-                (Whitespace,                         3.. 4, " " ),
-                (Output(OutputType::RedirectAppend), 4.. 6, ">>"),
-                (Whitespace,                         6.. 7, " " ),
-                (Output(OutputType::DependNot),      7.. 9, "||"),
-                (Whitespace,                         9..10, " " ),
-                (Output(OutputType::Depend),        10..12, "&&"),
-                (Whitespace,                        12..13, " " ),
-                (Output(OutputType::Ignore),        13..14, ";" ),
-            ],
-        )
+        assert_seq("> | >> || && ;", vec![
+            (Output(OutputType::Redirect), 0..1, ">"),
+            (Whitespace, 1..2, " "),
+            (Output(OutputType::Pipe), 2..3, "|"),
+            (Whitespace, 3..4, " "),
+            (Output(OutputType::RedirectAppend), 4..6, ">>"),
+            (Whitespace, 6..7, " "),
+            (Output(OutputType::DependNot), 7..9, "||"),
+            (Whitespace, 9..10, " "),
+            (Output(OutputType::Depend), 10..12, "&&"),
+            (Whitespace, 12..13, " "),
+            (Output(OutputType::Ignore), 13..14, ";"),
+        ])
     }
 }

@@ -12,7 +12,7 @@ pub struct Options {
     pub norc: bool,
 
     #[options(no_long, help = "execute command and exit")]
-    pub command: Option<String>
+    pub command: Option<String>,
 }
 
 impl Options {

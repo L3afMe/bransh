@@ -32,10 +32,10 @@ pub fn get_tab_completion(cmd: String, args: Vec<String>, ctx: &mut Context) -> 
 enum FileType {
     File,
     Directory,
-    Both
+    Both,
 }
 
-impl From<&TabCompletionType> for FileType{
+impl From<&TabCompletionType> for FileType {
     fn from(tab: &TabCompletionType) -> Self {
         match tab {
             TabCompletionType::Directory(_) => FileType::Directory,
@@ -49,24 +49,24 @@ fn get_comp(tc_type: TabCompletionType, args: Vec<String>, ctx: &mut Context) ->
     match tc_type.clone() {
         TabCompletionType::None => Vec::new(),
         TabCompletionType::File(subargs)
-            | TabCompletionType::Directory(subargs)
-            | TabCompletionType::FileOrDirectory(subargs) => {
-                let mut itr = args.into_iter().peekable();
-                let arg = itr.next().unwrap();
+        | TabCompletionType::Directory(subargs)
+        | TabCompletionType::FileOrDirectory(subargs) => {
+            let mut itr = args.into_iter().peekable();
+            let arg = itr.next().unwrap();
 
-                // If is last arg
-                if itr.peek().is_none() {
-                    return get_file(FileType::from(&tc_type), arg);
-                } else {
-                    for sub in subargs {
-                        if sub.arg == arg {
-                            return get_comp(sub.subargs, itr.collect(), ctx);
-                        }
+            // If is last arg
+            if itr.peek().is_none() {
+                return get_file(FileType::from(&tc_type), arg);
+            } else {
+                for sub in subargs {
+                    if sub.arg == arg {
+                        return get_comp(sub.subargs, itr.collect(), ctx);
                     }
                 }
+            }
 
-                Vec::new()
-            },
+            Vec::new()
+        },
         TabCompletionType::Dynamic(fun) => (fun)(args, ctx),
         TabCompletionType::Static(comp) => {
             if args.is_empty() {
@@ -109,11 +109,11 @@ fn get_file(file_type: FileType, mut arg: String) -> Vec<String> {
     }
 
     let mut trim_home_dir = None;
-    if arg.starts_with('~') { 
+    if arg.starts_with('~') {
         if arg.starts_with("~/") || arg == "~" {
             let home_dir = match home::home_dir() {
                 Some(home_dir) => home_dir.to_string_lossy().to_string(),
-                None => String::from("~")
+                None => String::from("~"),
             };
 
             trim_home_dir = Some(home_dir.clone());
@@ -123,7 +123,8 @@ fn get_file(file_type: FileType, mut arg: String) -> Vec<String> {
         }
     }
 
-    // This should never panic but if it does replace it with the comment below
+    // This should never panic but if it does replace it with
+    // the comment below
     let (path, cur_entry) = arg.rsplit_once("/").unwrap();
 
     // let (path, cur_entry) = if arg.contains('/') {
@@ -147,28 +148,26 @@ fn get_file(file_type: FileType, mut arg: String) -> Vec<String> {
     let mut output: Vec<String> = children_wrapped
         .unwrap()
         .filter(|child| child.is_ok())
-        .map(|child| child
-            .unwrap()
-            .path())
-        .filter(|child| 
-            (file_type == FileType::Directory && child.is_dir()) ||
-            (file_type == FileType::File && child.is_file())     ||
-             file_type == FileType::Both)
-        .filter(|child| child
-            .file_name()
-            .unwrap_or_else(|| OsStr::new(""))
-            .to_string_lossy()
-            .starts_with(&cur_entry))
-        .map(|child| child
-            .to_str()
-            .unwrap_or("")
-            .to_string())
+        .map(|child| child.unwrap().path())
+        .filter(|child| {
+            (file_type == FileType::Directory && child.is_dir())
+                || (file_type == FileType::File && child.is_file())
+                || file_type == FileType::Both
+        })
+        .filter(|child| {
+            child
+                .file_name()
+                .unwrap_or_else(|| OsStr::new(""))
+                .to_string_lossy()
+                .starts_with(&cur_entry)
+        })
+        .map(|child| child.to_str().unwrap_or("").to_string())
         .map(|mut child| {
             if let Some(home_dir) = trim_home_dir.clone() {
                 child = format!("~{}", child.strip_prefix(&home_dir).unwrap());
             }
             if let Some(cur_dir) = trim_cur_dir.clone() {
-                child = format!("{}", child.strip_prefix(&cur_dir).unwrap());
+                child = child.strip_prefix(&cur_dir).unwrap().to_string();
             }
 
             child

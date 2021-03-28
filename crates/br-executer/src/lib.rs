@@ -1,8 +1,14 @@
-use std::{os::unix::process::ExitStatusExt, path::PathBuf, process::{Child, Command, Stdio}, str::FromStr};
+#[cfg(unix)]
+use std::os::unix::process::ExitStatusExt;
+use std::{
+    path::PathBuf,
+    process::{Child, Command, ExitStatus, Stdio},
+    str::FromStr,
+};
 
 use br_command::load_builtins;
 use br_data::context::Context;
-use br_parser::{OutputType, parse_command};
+use br_parser::{parse_command, OutputType};
 
 #[allow(clippy::field_reassign_with_default)]
 pub fn execute_once(command: String) {
@@ -35,8 +41,7 @@ pub fn execute(ctx: &mut Context) -> Option<i32> {
     let mut commands = commands.into_iter().peekable();
     'cmdloop: while let Some(mut cmd) = commands.next() {
         match joiner {
-            OutputType::Ignore
-                | OutputType::Pipe => {},
+            OutputType::Ignore | OutputType::Pipe => {},
             OutputType::Depend => {
                 if last_output != 0 {
                     continue;
@@ -48,7 +53,7 @@ pub fn execute(ctx: &mut Context) -> Option<i32> {
                 }
             },
             OutputType::Redirect => {},
-            OutputType::RedirectAppend => {}
+            OutputType::RedirectAppend => {},
         }
         let mut output = 0;
 
@@ -106,19 +111,11 @@ pub fn execute(ctx: &mut Context) -> Option<i32> {
                         }
 
                         match cmd_child.wait() {
-                            Ok(exit_status) => match exit_status.code() {
-                                Some(code) => {
-                                    output = code;
-                                },
-                                None => match exit_status.signal() {
-                                    Some(signal) => {
-                                        output = 128 + signal;
-                                    },
-                                    None => {
-                                        eprintln!("Status terminated with no exit status!");
-                                        output = 0;
-                                    },
-                                },
+                            Ok(exit_status) => {
+                                output = get_exit_code(exit_status).unwrap_or_else(|| {
+                                    eprintln!("Status terminated with no exit status!");
+                                    0
+                                })
                             },
                             Err(why) => {
                                 eprintln!("Unable to execute command! {}", why);
@@ -138,4 +135,24 @@ pub fn execute(ctx: &mut Context) -> Option<i32> {
     }
 
     Some(last_output)
+}
+
+#[cfg(unix)]
+fn get_exit_code(exit_status: ExitStatus) -> Option<i32> {
+    match exit_status.code() {
+        Some(code) => {
+            return Some(code);
+        },
+        None => match exit_status.signal() {
+            Some(signal) => {
+                return Some(128 + signal);
+            },
+            None => return None,
+        },
+    }
+}
+
+#[cfg(windows)]
+fn get_exit_code(exit_status: ExitStatus) -> Option<i32> {
+    exit_status.code()
 }

@@ -1,15 +1,24 @@
 use std::{
-    fs::OpenOptions,
+    fs::{create_dir_all, OpenOptions},
     io::{Read, Write},
     path::{Path, PathBuf},
 };
 
-use br_executer::execute;
 use br_data::{context::Context, get_config_dir};
+use br_executer::execute;
 
 pub fn load_rc(ctx: &mut Context) {
     let config_dir = match get_config_dir() {
-        Some(dir) => Path::new(&dir).join("branshrc.br"),
+        Some(dir) => {
+            let path = Path::new(&dir);
+            if !path.exists() {
+                if let Err(why) = create_dir_all(path) {
+                    eprintln!("Unable to create config directory! {}", why);
+                    return;
+                };
+            }
+            path.join("branshrc.br")
+        },
         None => {
             eprintln!("Unable to get config directory!");
             return;

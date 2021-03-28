@@ -1,9 +1,11 @@
-use std::{env, fs::Metadata, os::unix::prelude::MetadataExt, path::PathBuf, str::FromStr};
+#[cfg(unix)]
+use std::os::unix::prelude::MetadataExt;
+use std::{env, fs::Metadata, path::PathBuf, str::FromStr};
 
 use br_data::context::Context;
 use lexer::Token;
 use logos::Logos;
-use parser::{CommandList, ParseError, parse_lex};
+use parser::{parse_lex, CommandList, ParseError};
 
 pub mod lexer;
 pub mod parser;
@@ -119,9 +121,7 @@ pub fn get_valid_commands(ctx: &Context) -> Vec<String> {
 
         for file in files.flatten() {
             if let Ok(metadata) = file.metadata() {
-                let mode = metadata.mode();
-                let can_exec = mode & 0o001 == 0o001;
-                if can_exec {
+                if can_exec(metadata) {
                     if let Some(file_name) = file.file_name().to_str() {
                         cmds.push(file_name.to_string())
                     }

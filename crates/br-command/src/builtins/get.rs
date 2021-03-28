@@ -32,9 +32,7 @@ pub const tc_var_list: TabCompletionFn = |args: Vec<String>, ctx: &Context| -> V
             ctx.variables.keys().map(|key| key.to_string()).collect()
         };
 
-       args.into_iter() 
-            .filter(|key| key.starts_with(&cur_arg))
-            .collect()
+        args.into_iter().filter(|key| key.starts_with(&cur_arg)).collect()
     } else {
         Vec::new()
     }

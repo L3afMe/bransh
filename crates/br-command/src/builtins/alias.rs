@@ -1,6 +1,9 @@
-use br_data::{command::{BrBuiltin, ExecuteFn, TabCompletion, TabCompletionFn, TabCompletionType}, context::Context};
+use br_data::{
+    command::{BrBuiltin, ExecuteFn, TabCompletion, TabCompletionFn, TabCompletionType},
+    context::Context,
+};
 
-lazy_static!{
+lazy_static! {
     pub static ref CMD: BrBuiltin = BrBuiltin {
         name: "alias",
         tab_completion: TabCompletionType::Static(vec![
@@ -16,8 +19,16 @@ lazy_static!{
 #[allow(non_upper_case_globals)]
 const tc_alias_list: TabCompletionFn = |args: Vec<String>, ctx: &Context| -> Vec<String> {
     if args.len() <= 1 {
-        let cur_arg = if let Some(arg) = args.get(0) { arg.clone() } else { String::new() };
-        ctx.aliases.keys().map(|key| key.to_string()).filter(|key| key.starts_with(&cur_arg)).collect()
+        let cur_arg = if let Some(arg) = args.get(0) {
+            arg.clone()
+        } else {
+            String::new()
+        };
+        ctx.aliases
+            .keys()
+            .map(|key| key.to_string())
+            .filter(|key| key.starts_with(&cur_arg))
+            .collect()
     } else {
         Vec::new()
     }
@@ -43,7 +54,7 @@ const execute: ExecuteFn = |mut args: Vec<String>, ctx: &mut Context| -> i32 {
             eprintln!("Invalid argument at pos 1! Expected one of 'get', 'set', 'del' or 'list'");
 
             1
-        }
+        },
     }
 };
 
@@ -56,9 +67,14 @@ fn get_alias(args: Vec<String>, ctx: &mut Context) -> i32 {
 
     let key = args[0].clone();
     if ctx.aliases.contains_key(&key) {
-        println!("{}", ctx.aliases.get(&key).unwrap_or(&String::from("Error occured while getting alias")));
+        println!(
+            "{}",
+            ctx.aliases
+                .get(&key)
+                .unwrap_or(&String::from("Error occured while getting alias"))
+        );
 
-        return 0
+        return 0;
     }
 
     eprintln!("Unable to find alias '{}'!", key);
@@ -91,16 +107,16 @@ fn del_alias(args: Vec<String>, ctx: &mut Context) -> i32 {
     if ctx.aliases.contains_key(&key) {
         ctx.aliases.remove(&key);
 
-        return 0
+        return 0;
     }
 
     eprintln!("Unable to find alias '{}'!", key);
 
     1
-} 
+}
 
 fn list_aliases(ctx: &mut Context) -> i32 {
     println!("{:?}", ctx.aliases.keys());
 
     0
-} 
+}

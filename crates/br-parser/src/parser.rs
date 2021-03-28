@@ -1,10 +1,9 @@
 use std::{fmt, ops::Range};
 
 use br_data::context::Context;
-
-use crate::{Command, lexer::Token};
-
 use logos::Lexer;
+
+use crate::{lexer::Token, Command};
 
 pub type CommandList = Vec<Command>;
 
@@ -17,16 +16,14 @@ pub enum ParseError {
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let value = match self {
-            Self::UnexpectedValue(range, expected_val, got_val) => 
-                format!(
-                    "Unexpected value at pos {}..{}, expected '{}' but got'{}'",
-                    range.start, range.end, expected_val, got_val,
-                ),
-            Self::LexError(range, value) => 
-                format!(
-                    "Unable to parse input at pos {}..{}, unexpected value '{}'", 
-                    range.start, range.end, value,
-                )
+            Self::UnexpectedValue(range, expected_val, got_val) => format!(
+                "Unexpected value at pos {}..{}, expected '{}' but got'{}'",
+                range.start, range.end, expected_val, got_val,
+            ),
+            Self::LexError(range, value) => format!(
+                "Unable to parse input at pos {}..{}, unexpected value '{}'",
+                range.start, range.end, value,
+            ),
         };
         write!(f, "{}", value)
     }
@@ -58,8 +55,7 @@ pub fn parse_lex(mut lex: Lexer<Token>, ctx: &Context) -> Result<CommandList, Pa
                     arg_builder.push('&');
                 }
             },
-            Token::Error => 
-                return Err(ParseError::LexError(lex.span(), lex.slice().to_string())),
+            Token::Error => return Err(ParseError::LexError(lex.span(), lex.slice().to_string())),
             Token::Variable((var_name, is_env)) => {
                 let var_val = ctx.get_variable(&var_name, String::default(), is_env);
                 arg_builder.push_str(&var_val);
@@ -70,7 +66,7 @@ pub fn parse_lex(mut lex: Lexer<Token>, ctx: &Context) -> Result<CommandList, Pa
                     let home = if word.starts_with("~/") || word == "~" {
                         let home_dir = match home::home_dir() {
                             Some(home_dir) => home_dir.to_string_lossy().to_string(),
-                            None => String::from("~")
+                            None => String::from("~"),
                         };
 
                         home_dir + word.strip_prefix("~").unwrap()
@@ -85,7 +81,7 @@ pub fn parse_lex(mut lex: Lexer<Token>, ctx: &Context) -> Result<CommandList, Pa
                 };
 
                 arg_builder.push_str(&arg);
-            }
+            },
             Token::NumberLiteral => arg_builder.push_str(lex.slice()),
             Token::StringLiteral(val) => arg_builder.push_str(&val),
             Token::Output(out_type) => {
@@ -93,13 +89,13 @@ pub fn parse_lex(mut lex: Lexer<Token>, ctx: &Context) -> Result<CommandList, Pa
                     return Err(ParseError::UnexpectedValue(
                         lex.span(),
                         String::from("command"),
-                        lex.slice().to_string()
+                        lex.slice().to_string(),
                     ));
                 } else if last_token == None || cmd_builder.command.is_empty() {
                     return Err(ParseError::UnexpectedValue(
                         lex.span(),
                         String::from("command"),
-                        lex.slice().to_string()
+                        lex.slice().to_string(),
                     ));
                 }
 
@@ -108,7 +104,7 @@ pub fn parse_lex(mut lex: Lexer<Token>, ctx: &Context) -> Result<CommandList, Pa
                 cmd_list.push(cmd_builder);
                 cmd_builder = Command::default();
             },
-            Token::Whitespace => { 
+            Token::Whitespace => {
                 if !arg_builder.is_empty() {
                     if cmd_builder.command.is_empty() {
                         cmd_builder.command = arg_builder;
@@ -119,7 +115,7 @@ pub fn parse_lex(mut lex: Lexer<Token>, ctx: &Context) -> Result<CommandList, Pa
                     arg_builder = String::new();
                 }
             },
-            Token::Comment => {}
+            Token::Comment => {},
         }
 
         last_token = Some(token);
@@ -140,15 +136,15 @@ pub fn parse_lex(mut lex: Lexer<Token>, ctx: &Context) -> Result<CommandList, Pa
     Ok(cmd_list)
 }
 
-// Make cargo stop complaining about functions used for tests
+// Make cargo stop complaining about functions used for
+// tests
 #[allow(unused_imports, dead_code)]
 mod test {
-    use logos::Logos;
     use br_data::context::Context;
+    use logos::Logos;
 
     use super::{parse_lex, ParseError};
-    use crate::lexer::Token;
-    use crate::{Command, OutputType};
+    use crate::{lexer::Token, Command, OutputType};
 
     fn get_output(command: &str) -> Result<Vec<Command>, ParseError> {
         let lex = Token::lexer(command);
@@ -160,16 +156,12 @@ mod test {
     fn one_echo() {
         assert_eq!(
             get_output("echo hi"),
-            Ok(vec![
-                Command {
-                    command: String::from("echo"),
-                    args: vec![
-                        String::from("hi"),
-                    ],
-                    background: false,
-                    output_type: OutputType::Ignore,
-                },
-            ])
+            Ok(vec![Command {
+                command:     String::from("echo"),
+                args:        vec![String::from("hi"),],
+                background:  false,
+                output_type: OutputType::Ignore,
+            },])
         );
     }
 
@@ -179,19 +171,15 @@ mod test {
             get_output("echo This || echo \"Not this\""),
             Ok(vec![
                 Command {
-                    command: String::from("echo"),
-                    args: vec![
-                        String::from("This"),
-                    ],
-                    background: false,
+                    command:     String::from("echo"),
+                    args:        vec![String::from("This"),],
+                    background:  false,
                     output_type: OutputType::DependNot,
                 },
                 Command {
-                    command: String::from("echo"),
-                    args: vec![
-                        String::from("Not this"),
-                    ],
-                    background: false,
+                    command:     String::from("echo"),
+                    args:        vec![String::from("Not this"),],
+                    background:  false,
                     output_type: OutputType::Ignore,
                 },
             ])
@@ -204,23 +192,18 @@ mod test {
             get_output("echo This || echo \"And this\""),
             Ok(vec![
                 Command {
-                    command: String::from("echo"),
-                    args: vec![
-                        String::from("This"),
-                    ],
-                    background: false,
+                    command:     String::from("echo"),
+                    args:        vec![String::from("This"),],
+                    background:  false,
                     output_type: OutputType::Depend,
                 },
                 Command {
-                    command: String::from("echo"),
-                    args: vec![
-                        String::from("And this"),
-                    ],
-                    background: false,
+                    command:     String::from("echo"),
+                    args:        vec![String::from("And this"),],
+                    background:  false,
                     output_type: OutputType::Ignore,
                 },
             ])
         );
     }
-
 }
